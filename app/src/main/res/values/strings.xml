@@ -1,3 +1,10 @@
 <resources>
     <string name="app_name">GeoPlaces</string>
+    <string name="btn_save_label">Save</string>
+    <string name="btn_increase_label">+</string>
+    <string name="btn_decrease_label">-</string>
+    <string name="menu_view_geofences">View Geofences</string>
+    <string name="menu_clear_geofences">Clear Geofences</string>
+    <string name="meters_label">meters</string>
+    <string name="default_meters">100 meters</string>
 </resources>

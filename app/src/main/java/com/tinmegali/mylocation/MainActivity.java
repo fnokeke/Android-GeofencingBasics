@@ -18,7 +18,10 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
+import android.view.View;
+import android.widget.Button;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
@@ -44,7 +47,11 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 
-import static android.R.attr.fragment;
+import java.util.Locale;
+
+import static com.tinmegali.mylocation.R.id.geofence;
+import static com.tinmegali.mylocation.R.id.lat;
+import static com.tinmegali.mylocation.R.id.lon;
 
 public class MainActivity extends AppCompatActivity
         implements
@@ -57,14 +64,25 @@ public class MainActivity extends AppCompatActivity
         ResultCallback<Status> {
 
     private static final String TAG = MainActivity.class.getSimpleName();
+    private static final String KEY_GEOFENCE_LABEL = "geofenceLabel";
+    private static final String KEY_GEOFENCE_ID = "geofenceId";
+    private static final String KEY_GEOFENCE_RADIUS = "geofenceRadius";
+    private final String KEY_GEOFENCE_LAT = "geofenceLat";
+    private final String KEY_GEOFENCE_LON = "geofenceLon";
+    private final String OLD_KEY_GEOFENCE_LAT = "GEOFENCE LATITUDE";
+    private final String OLD_KEY_GEOFENCE_LON = "GEOFENCE LONGITUDE";
 
+
+    CircleOptions mCircleOptions = new CircleOptions();
     private GoogleMap map;
     private GoogleApiClient googleApiClient;
     private Location lastLocation;
 
-    private TextView textLat, textLong;
+    private TextView textLat, textLong, tvRadius;
+    Button increaseBtn, decreaseBtn, saveBtn;
+    Context mContext;
 
-    private MapFragment mapFragment;
+    MapFragment mapFragment;
 
     private static final String NOTIFICATION_MSG = "NOTIFICATION MSG";
 
@@ -78,16 +96,26 @@ public class MainActivity extends AppCompatActivity
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        mContext = this;
         setContentView(R.layout.activity_main);
-        textLat = (TextView) findViewById(R.id.lat);
-        textLong = (TextView) findViewById(R.id.lon);
+        textLat = (TextView) findViewById(lat);
+        textLong = (TextView) findViewById(lon);
+
+        SharedPreferences sharedPref = getPreferences(Context.MODE_PRIVATE);
+        tvRadius = (TextView) findViewById(R.id.tv_radius);
+        int radius = sharedPref.getInt(KEY_GEOFENCE_RADIUS, 100);
+        tvRadius.setText(radius + " meters");
+
+        increaseBtn = (Button) findViewById(R.id.btn_increase_radius);
+        increaseBtn.setOnClickListener(increaseBtnHandler);
+
+        decreaseBtn = (Button) findViewById(R.id.btn_decrease_radius);
+        decreaseBtn.setOnClickListener(decreaseBtnHandler);
+        saveBtn = (Button) findViewById(R.id.btn_save);
+        saveBtn.setOnClickListener(saveBtnHandler);
 
         PlaceAutocompleteFragment autocompleteFragment = (PlaceAutocompleteFragment)
                 getFragmentManager().findFragmentById(R.id.place_autocomplete_fragment);
-
-        if (autocompleteFragment.getView() != null) {
-            autocompleteFragment.getView().setBackgroundColor(Color.BLACK);
-        }
 
         autocompleteFragment.setOnPlaceSelectedListener(new PlaceSelectionListener() {
             @Override
@@ -95,13 +123,22 @@ public class MainActivity extends AppCompatActivity
                 // TODO: Get info about the selected place.
                 Log.i(TAG, "Place: " + place.getName());
                 Log.i(TAG, "Place: " + place.getLatLng());
-                textLat.setText(place.getAddress());
-                textLong.setText("");
 
-//                markerForGeofence(place.getLatLng());
-                Geofence geofence = createGeofence(place.getAddress().toString().substring(0, 15), place.getLatLng(), GEOFENCE_RADIUS);
-                GeofencingRequest geofenceRequest = createGeofenceRequest(geofence);
-                addGeofence(geofenceRequest);
+                LatLng latlng = place.getLatLng();
+                float lat = (float) latlng.latitude;
+                float lon = (float) latlng.longitude;
+                String label = place.getAddress().toString();
+                String id = place.getId();
+                storeCurrentGeofence(lat, lon, label, id);
+
+                LatLng latLng = new LatLng(place.getLatLng().latitude, place.getLatLng().longitude);
+                Log.d(TAG, "onAddressEntered(" + latLng + ")");
+                markerForGeofence(latLng);
+                drawCircle(latLng);
+                markerLocation(latLng);
+//                Geofence geofence = createGeofence(place.getAddress().toString().substring(0, 15), place.getLatLng(), GEOFENCE_RADIUS);
+//                GeofencingRequest geofenceRequest = createGeofenceRequest(geofence);
+//                addGeofence(geofenceRequest);
             }
 
             @Override
@@ -111,12 +148,62 @@ public class MainActivity extends AppCompatActivity
             }
         });
 
+
         // initialize GoogleMaps
         initGMaps();
 
         // create GoogleApiClient
         createGoogleApi();
     }
+
+    void storeRadius(int radius) {
+        SharedPreferences sharedPref = getPreferences(Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = sharedPref.edit();
+        editor.putInt(KEY_GEOFENCE_RADIUS, radius);
+        editor.apply();
+    }
+
+    View.OnClickListener increaseBtnHandler = new View.OnClickListener() {
+        public void onClick(View v) {
+            int radius = (int) mCircleOptions.getRadius() + 20;
+            String msg = String.format(Locale.getDefault(), "%s meters", radius);
+            tvRadius.setText(msg);
+
+            storeRadius(radius);
+            redrawCircle();
+        }
+    };
+
+    View.OnClickListener decreaseBtnHandler = new View.OnClickListener() {
+        public void onClick(View v) {
+            if (mCircleOptions.getRadius() <= 100 ) return;
+
+            int radius = (int) mCircleOptions.getRadius() - 20;
+            String msg = String.format(Locale.getDefault(), "%s meters", radius);
+            tvRadius.setText(msg);
+
+            storeRadius(radius);
+            redrawCircle();
+        }
+    };
+
+    View.OnClickListener saveBtnHandler = new View.OnClickListener() {
+        public void onClick(View v) {
+            SharedPreferences sharedPref = getPreferences(Context.MODE_PRIVATE);
+            String label = sharedPref.getString(KEY_GEOFENCE_LABEL, "defaultLabel");
+            int radius = sharedPref.getInt(KEY_GEOFENCE_RADIUS, 100);
+            float lat = sharedPref.getFloat(KEY_GEOFENCE_LAT, -1);
+            float lon = sharedPref.getFloat(KEY_GEOFENCE_LON, -1);
+            LatLng latLng = new LatLng(lat, lon);
+
+            Geofence geofence = createGeofence(label, latLng, radius);
+            GeofencingRequest geofenceRequest = createGeofenceRequest(geofence);
+            addGeofence(geofenceRequest);
+
+            String msg = String.format(Locale.getDefault(), "%s (%s meters)", label, radius);
+            Toast.makeText(MainActivity.this, msg, Toast.LENGTH_LONG).show();
+        }
+    };
 
     // Create GoogleApiClient instance
     private void createGoogleApi() {
@@ -156,7 +243,7 @@ public class MainActivity extends AppCompatActivity
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
-            case R.id.geofence: {
+            case geofence: {
                 startGeofence();
                 return true;
             }
@@ -233,7 +320,7 @@ public class MainActivity extends AppCompatActivity
     @Override
     public void onMapClick(LatLng latLng) {
         Log.d(TAG, "onMapClick(" + latLng + ")");
-//        markerForGeofence(latLng);
+        markerForGeofence(latLng);
     }
 
     @Override
@@ -245,8 +332,8 @@ public class MainActivity extends AppCompatActivity
     private LocationRequest locationRequest;
     // Defined in mili seconds.
     // This number in extremely low, and should be used only for debug
-    private final int UPDATE_INTERVAL = 1000;
-    private final int FASTEST_INTERVAL = 900;
+    private final int UPDATE_INTERVAL = 15 * 60 * 1000;
+    private final int FASTEST_INTERVAL = 15 * 60 * 900;
 
     // Start location Updates
     private void startLocationUpdates() {
@@ -338,7 +425,7 @@ public class MainActivity extends AppCompatActivity
     private Marker geoFenceMarker;
 
     private void markerForGeofence(LatLng latLng) {
-        Log.i(TAG, "markerForGeofence(" + latLng + ")");
+        Log.i(TAG, "arkerForGeofence(" + latLng + ")");
         String title = latLng.latitude + ", " + latLng.longitude;
         // Define marker options
         MarkerOptions markerOptions = new MarkerOptions()
@@ -351,7 +438,6 @@ public class MainActivity extends AppCompatActivity
                 geoFenceMarker.remove();
 
             geoFenceMarker = map.addMarker(markerOptions);
-
         }
     }
 
@@ -368,8 +454,7 @@ public class MainActivity extends AppCompatActivity
     }
 
     private static final long GEO_DURATION = 60 * 60 * 1000;
-    private static final int GEO_DWELL_TIME = 2 * 60 * 1000;
-    private static final String GEOFENCE_REQ_ID = "My Geofence";
+    private static final int GEO_DWELL_TIME = 3 * 60 * 1000;
     private static final float GEOFENCE_RADIUS = 200.0f; // in meters
 
     // Create a Geofence
@@ -379,7 +464,7 @@ public class MainActivity extends AppCompatActivity
                 .setRequestId(placeLabel)
                 .setCircularRegion(latLng.latitude, latLng.longitude, radius)
                 .setExpirationDuration(GEO_DURATION)
-//                .setLoiteringDelay(GEO_DWELL_TIME)
+                .setLoiteringDelay(GEO_DWELL_TIME)
                 .setTransitionTypes(Geofence.GEOFENCE_TRANSITION_ENTER
                         | Geofence.GEOFENCE_TRANSITION_EXIT)
                 .build();
@@ -438,25 +523,62 @@ public class MainActivity extends AppCompatActivity
         if (geoFenceLimits != null)
             geoFenceLimits.remove();
 
-        CircleOptions circleOptions = new CircleOptions()
+        mCircleOptions
                 .center(geoFenceMarker.getPosition())
                 .strokeColor(Color.argb(50, 70, 70, 70))
                 .fillColor(Color.argb(100, 150, 150, 150))
                 .radius(GEOFENCE_RADIUS);
-        geoFenceLimits = map.addCircle(circleOptions);
+        geoFenceLimits = map.addCircle(mCircleOptions);
     }
 
-    private final String KEY_GEOFENCE_LAT = "GEOFENCE LATITUDE";
-    private final String KEY_GEOFENCE_LON = "GEOFENCE LONGITUDE";
+    void drawCircle(LatLng latLng) {
+        if (geoFenceLimits != null)
+            geoFenceLimits.remove();
 
+        mCircleOptions
+                .center(latLng)
+                .strokeColor(Color.argb(50, 70, 70, 70))
+                .fillColor(Color.argb(100, 150, 150, 150))
+                .radius(GEOFENCE_RADIUS);
+        geoFenceLimits = map.addCircle(mCircleOptions);
+    }
+
+    void redrawCircle() {
+        if (geoFenceLimits != null)
+            geoFenceLimits.remove();
+
+        SharedPreferences sharedPref = getPreferences(Context.MODE_PRIVATE);
+        int radius = sharedPref.getInt(KEY_GEOFENCE_RADIUS, 100);
+        float lat = sharedPref.getFloat(KEY_GEOFENCE_LAT, -1);
+        float lon = sharedPref.getFloat(KEY_GEOFENCE_LON, -1);
+        LatLng latLng = new LatLng(lat, lon);
+
+        mCircleOptions
+                .center(latLng)
+                .strokeColor(Color.argb(50, 70, 70, 70))
+                .fillColor(Color.argb(100, 150, 150, 150))
+                .radius(radius);
+        geoFenceLimits = map.addCircle(mCircleOptions);
+    }
     // Saving GeoFence marker with prefs mng
     private void saveGeofence() {
         Log.d(TAG, "saveGeofence()");
         SharedPreferences sharedPref = getPreferences(Context.MODE_PRIVATE);
         SharedPreferences.Editor editor = sharedPref.edit();
 
-        editor.putLong(KEY_GEOFENCE_LAT, Double.doubleToRawLongBits(geoFenceMarker.getPosition().latitude));
-        editor.putLong(KEY_GEOFENCE_LON, Double.doubleToRawLongBits(geoFenceMarker.getPosition().longitude));
+        editor.putLong(OLD_KEY_GEOFENCE_LAT, Double.doubleToRawLongBits(geoFenceMarker.getPosition().latitude));
+        editor.putLong(OLD_KEY_GEOFENCE_LON, Double.doubleToRawLongBits(geoFenceMarker.getPosition().longitude));
+        editor.apply();
+    }
+
+    private void storeCurrentGeofence(float lat, float lon, String label, String id) {
+        Log.d(TAG, "storeCurrentGeofence()");
+        SharedPreferences sharedPref = getPreferences(Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = sharedPref.edit();
+        editor.putFloat(KEY_GEOFENCE_LAT, lat);
+        editor.putFloat(KEY_GEOFENCE_LON, lon);
+        editor.putString(KEY_GEOFENCE_LABEL, label);
+        editor.putString(KEY_GEOFENCE_ID, id);
         editor.apply();
     }
 
@@ -464,13 +586,12 @@ public class MainActivity extends AppCompatActivity
     private void recoverGeofenceMarker() {
         Log.d(TAG, "recoverGeofenceMarker");
         SharedPreferences sharedPref = getPreferences(Context.MODE_PRIVATE);
-
-        if (sharedPref.contains(KEY_GEOFENCE_LAT) && sharedPref.contains(KEY_GEOFENCE_LON)) {
-            double lat = Double.longBitsToDouble(sharedPref.getLong(KEY_GEOFENCE_LAT, -1));
-            double lon = Double.longBitsToDouble(sharedPref.getLong(KEY_GEOFENCE_LON, -1));
-            LatLng latLng = new LatLng(lat, lon);
-            markerForGeofence(latLng);
-            drawGeofence();
+        if (sharedPref.contains(OLD_KEY_GEOFENCE_LAT) && sharedPref.contains(OLD_KEY_GEOFENCE_LON)) {
+//            double lat = Double.longBitsToDouble(sharedPref.getLong(OLD_KEY_GEOFENCE_LAT, -1));
+//            double lon = Double.longBitsToDouble(sharedPref.getLong(OLD_KEY_GEOFENCE_LON, -1));
+//            LatLng latLng = new LatLng(lat, lon);
+//            markerForGeofence(latLng);
+//            drawGeofence();
         }
     }
 
