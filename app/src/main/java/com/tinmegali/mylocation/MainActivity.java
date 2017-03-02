@@ -209,7 +209,7 @@ public class MainActivity extends AppCompatActivity
             float lon = sharedPref.getFloat(KEY_GEOFENCE_LON, -1);
             LatLng latLng = new LatLng(lat, lon);
 
-            Geofence geofence = createGeofence(id, latLng, radius);
+            Geofence geofence = createGeofence(address, latLng, radius);
             GeofencingRequest geofenceRequest = createGeofenceRequest(geofence);
             addGeofence(geofenceRequest);
 
@@ -505,10 +505,10 @@ public class MainActivity extends AppCompatActivity
     private static final float GEOFENCE_RADIUS = 200.0f; // in meters
 
     // Create a Geofence
-    private Geofence createGeofence(String placeId, LatLng latLng, float radius) {
+    private Geofence createGeofence(String placeAddress, LatLng latLng, float radius) {
         Log.d(TAG, "createGeofence");
         return new Geofence.Builder()
-                .setRequestId(placeId)
+                .setRequestId(placeAddress)
                 .setCircularRegion(latLng.latitude, latLng.longitude, radius)
                 .setExpirationDuration(GEO_DURATION)
                 .setLoiteringDelay(GEO_DWELL_TIME)
