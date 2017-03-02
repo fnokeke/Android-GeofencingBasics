@@ -83,7 +83,7 @@
                 android:layout_weight="1"
                 android:background="@android:color/black"
                 android:text="@string/btn_increase_label"
-                android:textColor="@android:color/holo_blue_bright"
+                android:textColor="@android:color/holo_blue_dark"
                 android:textSize="48sp" />
 
         </LinearLayout>

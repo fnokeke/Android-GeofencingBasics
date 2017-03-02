@@ -174,6 +174,9 @@ public class MainActivity extends AppCompatActivity
 
     View.OnClickListener increaseBtnHandler = new View.OnClickListener() {
         public void onClick(View v) {
+            if (mCircleOptions.getRadius() <= 100)  {
+                mCircleOptions.radius(100);
+            }
             int radius = (int) mCircleOptions.getRadius() + 20;
             String msg = String.format(Locale.getDefault(), "%s meters", radius);
             tvRadius.setText(msg);
