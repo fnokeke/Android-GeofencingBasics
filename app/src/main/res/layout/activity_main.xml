@@ -10,38 +10,6 @@
     android:paddingTop="@dimen/activity_vertical_margin"
     tools:context="com.tinmegali.mylocation.MainActivity">
 
-    <!-- Line with Latitude and Longitude -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="@color/colorPrimaryDark"
-        android:orientation="horizontal"
-        android:paddingBottom="5dp"
-        android:paddingLeft="15dp"
-        android:paddingRight="15dp"
-        android:paddingTop="5dp"
-        android:visibility="gone">
-
-        <!--Latitude-->
-        <TextView
-            android:id="@+id/lat"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_weight="0.5"
-            android:text="Lat: "
-            android:textColor="@color/white" />
-
-        <!--Longitude-->
-        <TextView
-            android:id="@+id/lon"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_weight="0.5"
-            android:text="Long: "
-            android:textColor="@color/white" />
-
-    </LinearLayout>
-
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
