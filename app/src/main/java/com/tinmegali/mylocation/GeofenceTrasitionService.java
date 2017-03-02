@@ -7,6 +7,7 @@ import android.app.PendingIntent;
 import android.app.TaskStackBuilder;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.support.v4.app.NotificationCompat;
 import android.text.TextUtils;
@@ -93,16 +94,31 @@ public class GeofenceTrasitionService extends IntentService {
 
     }
 
+    public static Intent getLaunchIntent(Context context, String appPackageName) {
+        PackageManager pm = context.getPackageManager();
+        Intent appStartIntent = pm.getLaunchIntentForPackage(appPackageName);
+        if (appStartIntent == null) {
+            appStartIntent = pm.getLaunchIntentForPackage(context.getPackageName());
+        }
+        return appStartIntent;
+    }
+
     // Create notification
     private Notification createNotification(String msg, PendingIntent notificationPendingIntent) {
+        Intent launchAppIntent = getLaunchIntent(getApplicationContext(), "io.smalldatalab.android.pam");
+        PendingIntent contentIntent = PendingIntent.getActivity(getApplicationContext(), 0, launchAppIntent, PendingIntent.FLAG_CANCEL_CURRENT);
+
         NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(this);
         notificationBuilder
                 .setSmallIcon(R.drawable.ic_action_location)
                 .setColor(Color.RED)
                 .setContentTitle(msg)
-                .setContentText("Geofence Notification!")
-                .setContentIntent(notificationPendingIntent)
+                .setContentText("So how are you feeling?")
+                .setContentIntent(contentIntent)
                 .setDefaults(Notification.DEFAULT_LIGHTS | Notification.DEFAULT_VIBRATE | Notification.DEFAULT_SOUND)
+//                .addAction(android.R.drawable.ic_input_add, "Fantastic", contentIntent) // #0
+//                .addAction(android.R.drawable.ic_menu_close_clear_cancel, "Meh", contentIntent) // #2
+//                .addAction(android.R.drawable.ic_menu_close_clear_cancel, "Ughh!", contentIntent) // #2
                 .setAutoCancel(true);
         return notificationBuilder.build();
     }
