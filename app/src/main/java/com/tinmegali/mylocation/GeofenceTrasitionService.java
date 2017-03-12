@@ -65,7 +65,7 @@ public class GeofenceTrasitionService extends IntentService {
 
         String status = null;
         if ( geoFenceTransition == Geofence.GEOFENCE_TRANSITION_ENTER )
-            status = "Arrive ";
+            status = "Entered ";
         else if ( geoFenceTransition == Geofence.GEOFENCE_TRANSITION_EXIT )
             status = "Left ";
         return status + TextUtils.join( ", ", triggeringGeofencesList);
