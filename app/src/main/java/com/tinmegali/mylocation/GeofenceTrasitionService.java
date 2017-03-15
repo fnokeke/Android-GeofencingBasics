@@ -20,6 +20,8 @@ import com.google.android.gms.location.GeofencingEvent;
 import java.util.ArrayList;
 import java.util.List;
 
+import static android.support.v7.widget.AppCompatDrawableManager.get;
+
 
 public class GeofenceTrasitionService extends IntentService {
 
@@ -41,6 +43,7 @@ public class GeofenceTrasitionService extends IntentService {
             return;
         }
 
+        Log.i(TAG, "my geos: " + geofencingEvent.toString());
         int geoFenceTransition = geofencingEvent.getGeofenceTransition();
         // Check if the transition type is of interest
         if ( geoFenceTransition == Geofence.GEOFENCE_TRANSITION_ENTER ||
@@ -59,13 +62,17 @@ public class GeofenceTrasitionService extends IntentService {
     private String getGeofenceTrasitionDetails(int geoFenceTransition, List<Geofence> triggeringGeofences) {
         // get the ID of each geofence triggered
         ArrayList<String> triggeringGeofencesList = new ArrayList<>();
+        String requestId;
+        String geofenceLabel;
         for ( Geofence geofence : triggeringGeofences ) {
-            triggeringGeofencesList.add( geofence.getRequestId() );
+            requestId = geofence.getRequestId();
+            geofenceLabel = MainActivity.getGeofenceLabel(getApplicationContext(), requestId);
+            triggeringGeofencesList.add(geofenceLabel);
         }
 
         String status = null;
         if ( geoFenceTransition == Geofence.GEOFENCE_TRANSITION_ENTER )
-            status = "Entered ";
+            status = "Within ";
         else if ( geoFenceTransition == Geofence.GEOFENCE_TRANSITION_EXIT )
             status = "Left ";
         return status + TextUtils.join( ", ", triggeringGeofencesList);

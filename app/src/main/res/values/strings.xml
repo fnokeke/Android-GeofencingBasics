@@ -6,5 +6,9 @@
     <string name="menu_view_geofences">View Geofences</string>
     <string name="menu_clear_geofences">Clear Geofences</string>
     <string name="meters_label">meters</string>
+    <string name="meters">m</string>
     <string name="default_meters">100 meters</string>
+    <string name="place_label">place label</string>
+    <string name="radius_label">radius (m)</string>
+    <string name="slash">/</string>
 </resources>
