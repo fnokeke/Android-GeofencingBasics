@@ -317,7 +317,7 @@ public class MainActivity extends AppCompatActivity implements
             label = joValue.optString("label");
             address = joValue.optString("address");
             radius = joValue.optInt("radius");
-            geofenceSummary += String.format(locale, "%s: %s (%d meters)\n\n\n", label, address, radius) ;
+            geofenceSummary += String.format(locale, "%s: %s (%d meters)\n\n\n", label, address, radius);
         }
 
         if (allGeofences.length() == 0) {
@@ -614,7 +614,7 @@ public class MainActivity extends AppCompatActivity implements
     private void addGeofence(GeofencingRequest request) {
         Log.d(TAG, "addGeofence");
         if (checkPermission())
-            LocationServices.GeofencingApi.addGeofences(googleApiClient, request, createGeofencePendingIntent() ).setResultCallback(this);
+            LocationServices.GeofencingApi.addGeofences(googleApiClient, request, createGeofencePendingIntent()).setResultCallback(this);
     }
 
     // Create a Geofence Request
@@ -676,8 +676,7 @@ public class MainActivity extends AppCompatActivity implements
             return geoFencePendingIntent;
 
         Intent intent = new Intent(this, GeofenceTransitionService.class);
-        return PendingIntent.getService(
-                mContext, GEOFENCE_REQ_CODE, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+        return PendingIntent.getService(this, GEOFENCE_REQ_CODE, intent, PendingIntent.FLAG_UPDATE_CURRENT);
     }
 
     // Draw Geofence circle on GoogleMap
@@ -814,9 +813,6 @@ public class MainActivity extends AppCompatActivity implements
         }
         return results;
     }
-
-
-
 
 
     public void oldrecreateAllGeofences() {

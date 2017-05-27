@@ -39,7 +39,6 @@ public class GeofenceTransitionService extends IntentService {
         }
 
         int geoFenceTransition = geofencingEvent.getGeofenceTransition();
-
         if (geoFenceTransition == Geofence.GEOFENCE_TRANSITION_ENTER ||
                 geoFenceTransition == Geofence.GEOFENCE_TRANSITION_EXIT ||
                 geoFenceTransition == Geofence.GEOFENCE_TRANSITION_DWELL) {
