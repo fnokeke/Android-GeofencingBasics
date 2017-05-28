@@ -240,7 +240,7 @@ public class MainActivity extends AppCompatActivity implements
     private void createGoogleApi() {
         Log.d(TAG, "createGoogleApi()");
         if (googleApiClient == null) {
-            googleApiClient = new GoogleApiClient.Builder(this)
+            googleApiClient = new GoogleApiClient.Builder(mContext)
                     .addConnectionCallbacks(this)
                     .addOnConnectionFailedListener(this)
                     .addApi(LocationServices.API)
@@ -555,7 +555,6 @@ public class MainActivity extends AppCompatActivity implements
 //        }
 //    }
 
-    private static final long GEO_DURATION = 3 * 7 * 24 * 60 * 60 * 1000;
     private static final int GEO_DWELL_TIME = 0;
     private static final float GEOFENCE_RADIUS = 200.0f; // in meters
 
@@ -565,7 +564,7 @@ public class MainActivity extends AppCompatActivity implements
         Geofence geofence = new Geofence.Builder()
                 .setRequestId(id)
                 .setCircularRegion(latLng.latitude, latLng.longitude, radius)
-                .setExpirationDuration(GEO_DURATION)
+                .setExpirationDuration(Geofence.NEVER_EXPIRE)
                 .setLoiteringDelay(GEO_DWELL_TIME)
                 .setTransitionTypes(Geofence.GEOFENCE_TRANSITION_ENTER | Geofence.GEOFENCE_TRANSITION_EXIT)
                 .build();
@@ -613,6 +612,7 @@ public class MainActivity extends AppCompatActivity implements
     // Add the created GeofenceRequest to the device's monitoring list
     private void addGeofence(GeofencingRequest request) {
         Log.d(TAG, "addGeofence");
+        createGoogleApi();
         if (checkPermission())
             LocationServices.GeofencingApi.addGeofences(googleApiClient, request, createGeofencePendingIntent()).setResultCallback(this);
     }
@@ -675,8 +675,8 @@ public class MainActivity extends AppCompatActivity implements
         if (geoFencePendingIntent != null)
             return geoFencePendingIntent;
 
-        Intent intent = new Intent(this, GeofenceTransitionService.class);
-        return PendingIntent.getService(this, GEOFENCE_REQ_CODE, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+        Intent intent = new Intent(mContext, GeofenceTransitionService.class);
+        return PendingIntent.getService(mContext, GEOFENCE_REQ_CODE, intent, PendingIntent.FLAG_UPDATE_CURRENT);
     }
 
     // Draw Geofence circle on GoogleMap
@@ -870,3 +870,4 @@ public class MainActivity extends AppCompatActivity implements
     }
 
 }
+// TODO: 5/27/17 avoid showing duplicate list of the same addresses / check if address has already been added before adding new one
