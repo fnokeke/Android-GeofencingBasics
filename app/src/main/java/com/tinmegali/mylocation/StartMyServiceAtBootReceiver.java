@@ -12,7 +12,7 @@ public class StartMyServiceAtBootReceiver extends BroadcastReceiver {
     public void onReceive(Context context, Intent intent) {
         if (Intent.ACTION_BOOT_COMPLETED.equals(intent.getAction())) {
             GeofenceHelper geofenceHelper = new GeofenceHelper(context);
-            geofenceHelper.beginGeoEntryPoint();
+            geofenceHelper.connectGoogleApiClient();
         }
 
     }

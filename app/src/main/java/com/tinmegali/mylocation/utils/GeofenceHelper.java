@@ -43,6 +43,25 @@ public class GeofenceHelper {
     public GeofenceHelper(Context context) {
         mContext = context;
         stack = new Stack<>();
+        initGeoState();
+    }
+
+    private void initGeoState() {
+        if (googleApiClient == null) {
+            googleApiClient = new GoogleApiClient.Builder(mContext)
+                    .addConnectionCallbacks(createStoredGeofencesCallback())
+                    .addOnConnectionFailedListener(getOnConnectionFailedListener())
+                    .addApi(LocationServices.API)
+                    .build();
+        }
+    }
+
+    public void connectGoogleApiClient() {
+        googleApiClient.connect();
+    }
+
+    public void disconnectGoogleApiClient() {
+        googleApiClient.disconnect();
     }
 
     private void enqueueGeofenceToSave(JSONObject geo) {
@@ -53,17 +72,6 @@ public class GeofenceHelper {
         return stack.pop();
     }
 
-    public void beginGeoEntryPoint() {
-        AlarmHelper.sendNotification(mContext, "GeoEntryPoint Started.", 2222);
-        if (googleApiClient == null) {
-            googleApiClient = new GoogleApiClient.Builder(mContext)
-                    .addConnectionCallbacks(createStoredGeofencesCallback())
-                    .addOnConnectionFailedListener(getOnConnectionFailedListener())
-                    .addApi(LocationServices.API)
-                    .build();
-        }
-        googleApiClient.connect();
-    }
 
     private GoogleApiClient.ConnectionCallbacks createStoredGeofencesCallback() {
         return new GoogleApiClient.ConnectionCallbacks() {
@@ -108,7 +116,7 @@ public class GeofenceHelper {
                 .build();
     }
 
-    private void createGeofence(JSONObject geo) {
+    public void createGeofence(JSONObject geo) {
         Geofence geofence = new Geofence.Builder()
                 .setRequestId(geo.optString("id"))
                 .setCircularRegion(geo.optDouble("lat"), geo.optDouble("lon"), geo.optInt("radius"))
@@ -123,8 +131,7 @@ public class GeofenceHelper {
 
     private void addGeofence(GeofencingRequest request, JSONObject geo) {
         if (checkPermission()) {
-            LocationServices.GeofencingApi.addGeofences(googleApiClient, request,
-                    createGeofencePendingIntent()).setResultCallback(handleAddGeoCallback());
+            LocationServices.GeofencingApi.addGeofences(googleApiClient, request, createGeofencePendingIntent()).setResultCallback(handleAddGeoCallback());
             enqueueGeofenceToSave(geo);
         }
     }
@@ -137,13 +144,23 @@ public class GeofenceHelper {
                     Toast.makeText(mContext, "Geofence Successfully created.", Toast.LENGTH_LONG).show();
                     JSONObject geo = dequeueGeofenceToSave();
                     storeGeofenceOnDevice(geo);
-                    LocalBroadcastHelper.broadcast(mContext,
-                            MainActivity.REDRAW_CIRCLE_FILTER, MainActivity.REDRAW_CIRCLE_INTENT_KEY, geo.toString());
+                    JSONObject intentInfo = createIntentInfo(MainActivity.ACTION_REDRAW_CIRCLE, geo.toString());
+                    LocalBroadcastHelper.broadcast(mContext, intentInfo);
                 } else {
                     Toast.makeText(mContext, "Failed to create geofence.", Toast.LENGTH_LONG).show();
                 }
             }
         };
+    }
+
+    private JSONObject createIntentInfo(String typeValue, String contentValue) {
+        JSONObject intentExtras = new JSONObject();
+        JsonHelper.setJSONValue(intentExtras, "filterKey", MainActivity.REDRAW_CIRCLE_FILTER);
+        JsonHelper.setJSONValue(intentExtras, "typeKey", MainActivity.REDRAW_TYPE_KEY);
+        JsonHelper.setJSONValue(intentExtras, "contentKey", MainActivity.REDRAW_CONTENT_KEY);
+        JsonHelper.setJSONValue(intentExtras, "typeValue", typeValue);
+        JsonHelper.setJSONValue(intentExtras, "contentValue", contentValue);
+        return intentExtras;
     }
 
     private void storeGeofenceOnDevice(JSONObject geo) {
@@ -152,7 +169,7 @@ public class GeofenceHelper {
         setSavedGeofences(allGeofences);
     }
 
-    private JSONObject getSavedGeofences() {
+    public JSONObject getSavedGeofences() {
         JSONObject allGeofences = JsonHelper.strToJsonObject(Store.getString(mContext, Store.SAVED_GEOFENCES));
         return valuesStrToJsonObject(allGeofences);
     }
@@ -171,12 +188,9 @@ public class GeofenceHelper {
         return geoFencePendingIntent;
     }
 
-    // Check for permission to access Location
     private boolean checkPermission() {
         Log.d(TAG, "checkPermission()");
-        // Ask for permission if it wasn't granted yet
-        return (ContextCompat.checkSelfPermission(mContext, Manifest.permission.ACCESS_FINE_LOCATION)
-                == PackageManager.PERMISSION_GRANTED);
+        return (ContextCompat.checkSelfPermission(mContext, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED);
     }
 
     private JSONObject valuesStrToJsonObject(JSONObject allGeofences) {
@@ -204,5 +218,23 @@ public class GeofenceHelper {
             JsonHelper.setJSONValue(results, key, joValue.toString());
         }
         return results;
+    }
+
+    public void clearAllGeofences() {
+        LocationServices.GeofencingApi.removeGeofences(googleApiClient, createGeofencePendingIntent()).setResultCallback(new ResultCallback<Status>() {
+            @Override
+            public void onResult(@NonNull Status status) {
+                if (status.isSuccess()) {
+                    clearAllGeofencesStoredOnDevice();
+                    JSONObject intentInfo = createIntentInfo(MainActivity.ACTION_REMOVE_CIRCLE, "true");
+                    LocalBroadcastHelper.broadcast(mContext, intentInfo);
+                    Toast.makeText(mContext, "All Geofences Cleared.", Toast.LENGTH_LONG).show();
+                }
+            }
+        });
+    }
+
+    private void clearAllGeofencesStoredOnDevice() {
+        setSavedGeofences(new JSONObject());
     }
 }
