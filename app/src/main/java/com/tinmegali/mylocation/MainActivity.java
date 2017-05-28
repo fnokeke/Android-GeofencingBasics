@@ -93,9 +93,6 @@ public class MainActivity extends AppCompatActivity implements
     public static final String ACTION_REDRAW_CIRCLE = "redrawCircleIntentKey";
     public static final String ACTION_REMOVE_CIRCLE = "removeDrawCircleIntentKey";
 
-//    SharedPreferences sharedPref = getPreferences(Context.MODE_PRIVATE);
-//    SharedPreferences.Editor editor = sharedPref.edit();
-
     private PendingIntent geoFencePendingIntent;
     private final int GEOFENCE_REQ_CODE = 0;
     JSONObject mGeo = new JSONObject();
@@ -177,6 +174,14 @@ public class MainActivity extends AppCompatActivity implements
         }
     }
 
+    private static SharedPreferences getPrefs(Context context) {
+        return context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
+    }
+
+    public static SharedPreferences.Editor getEditor(Context context) {
+        return getPrefs(context).edit();
+    }
+
     JSONObject getLastPlaceSearched() {
         JSONObject place = new JSONObject();
         SharedPreferences sharedPref = getPrefs(mContext);
@@ -216,7 +221,6 @@ public class MainActivity extends AppCompatActivity implements
             String msg = String.format(Locale.getDefault(), "Saved: %s (%s meters)", label, radius);
             Toast.makeText(mContext, msg, Toast.LENGTH_LONG).show();
 
-//            createGeofence(lastPlaceSaved.optString("id"), label, lastPlaceSaved.optString("address"), latLng, radius);
         }
     };
 
@@ -258,31 +262,6 @@ public class MainActivity extends AppCompatActivity implements
     }
 
 
-//    View.OnClickListener increaseBtnHandler = new View.OnClickListener() {
-//        public void onClick(View v) {
-//            if (mCircleOptions.getRadius() <= 100)  {
-//                mCircleOptions.radius(100);
-//            }
-//            int radius = (int) mCircleOptions.getRadius() + 20;
-//            tvRadius.setText(radius);
-//
-//            storeRadius(radius);
-//            redrawCircle();
-//        }
-//    };
-//
-//    View.OnClickListener decreaseBtnHandler = new View.OnClickListener() {
-//        public void onClick(View v) {
-//            if (mCircleOptions.getRadius() <= 100) return;
-//
-//            int radius = (int) mCircleOptions.getRadius() - 20;
-//            tvRadius.setText(radius);
-//
-//            storeRadius(radius);
-//            redrawCircle();
-//        }
-//    };
-
     private GoogleApiClient.ConnectionCallbacks getGoogleCallback() {
         return new GoogleApiClient.ConnectionCallbacks() {
             @Override
@@ -306,29 +285,6 @@ public class MainActivity extends AppCompatActivity implements
                 AlarmHelper.sendNotification(mContext, "boss failed", 5459);
             }
         };
-    }
-
-    public void beginGeoCreationProcess() {
-        AlarmHelper.sendNotification(mContext, "2nd reGoogleApi next.", 2222);
-        if (googleApiClient == null) {
-            googleApiClient = new GoogleApiClient.Builder(mContext)
-                    .addConnectionCallbacks(getGoogleCallback())
-                    .addOnConnectionFailedListener(getOnConnectionFailedListener())
-                    .addApi(LocationServices.API)
-                    .build();
-        }
-        googleApiClient.connect();
-    }
-
-    public void createGoogleApi() {
-        AlarmHelper.sendNotification(mContext, "CreateGoogleApi next.", 2222);
-        if (googleApiClient == null) {
-            googleApiClient = new GoogleApiClient.Builder(this)
-                    .addConnectionCallbacks(this)
-                    .addOnConnectionFailedListener(this)
-                    .addApi(LocationServices.API)
-                    .build();
-        }
     }
 
     @Override
@@ -355,11 +311,6 @@ public class MainActivity extends AppCompatActivity implements
     @Override
     protected void onStart() {
         super.onStart();
-
-        // Call GoogleApiClient connection when starting the Activity
-//        createGoogleApi();
-//        googleApiClient.connect();
-//        beginGeoCreationProcess();
     }
 
     @Override
@@ -661,7 +612,6 @@ public class MainActivity extends AppCompatActivity implements
                     createGeofencePendingIntent()).setResultCallback(new ResultCallback<Status>() {
                 @Override
                 public void onResult(@NonNull Status status) {
-                    workOnCallback(status);
                 }
             });
     }
@@ -677,7 +627,6 @@ public class MainActivity extends AppCompatActivity implements
 
     @Override
     public void onResult(@NonNull Status status) {
-        workOnCallback(status);
     }
 
     private void workOnCallback(Status status) {
@@ -787,35 +736,6 @@ public class MainActivity extends AppCompatActivity implements
 //        }
     }
 
-    // Clear Geofence
-//    private void clearAllGeofences() {
-//        LocationServices.GeofencingApi.removeGeofences(
-//                googleApiClient,
-//                createGeofencePendingIntent()
-//        ).setResultCallback(new ResultCallback<Status>() {
-//            @Override
-//            public void onResult(@NonNull Status status) {
-//                if (status.isSuccess()) {
-//                    clearGeofencesViewList();
-//                    Toast.makeText(mContext, "All Geofences Cleared.", Toast.LENGTH_LONG).show();
-//                }
-//            }
-//        });
-//    }
-//
-//    private void clearGeofencesViewList() {
-//        setSavedGeofences(new JSONObject());
-//    }
-
-    private void oldclearGeofencesViewList() {
-        Map<String, ?> keys = getPrefs(mContext).getAll();
-        for (Map.Entry<String, ?> entry : keys.entrySet()) {
-            Log.d("map values", entry.getKey() + ": " + entry.getValue().toString());
-            if (entry.getKey().contains(GEO_PREFIX)) {
-                getEditor(mContext).remove(entry.getKey()).apply();
-            }
-        }
-    }
 
     private void removeGeofenceDraw() {
         Log.d(TAG, "removeGeofenceDraw()");
@@ -823,14 +743,6 @@ public class MainActivity extends AppCompatActivity implements
             geoFenceMarker.remove();
         if (geoFenceBorder != null)
             geoFenceBorder.remove();
-    }
-
-    private static SharedPreferences getPrefs(Context context) {
-        return context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
-    }
-
-    public static SharedPreferences.Editor getEditor(Context context) {
-        return getPrefs(context).edit();
     }
 
     public void setGeofenceToSave(JSONObject geo) {
@@ -869,40 +781,6 @@ public class MainActivity extends AppCompatActivity implements
     }
 
 
-//    private void oldRecreateSingleGeofence(String geoContent) {
-//        JSONObject geo;
-//        if (geoContent.equals("")) return;
-//        try {
-//            geo = new JSONObject(geoContent);
-//            createGeofence(
-//                    geo.optString("id"),
-//                    geo.optString("placeLabel"),
-//                    geo.optString("address"),
-//                    new LatLng(geo.optDouble("lat"), geo.optDouble("lon")),
-//                    geo.optInt("radius"));
-//        } catch (JSONException e) {
-//            Log.e(TAG, "oldRecreateSingleGeofence: json-exception: " + e.getMessage());
-//            e.printStackTrace();
-//        }
-//    }
-
-    //    private void oldviewGeofences() {
-//        String allGeofencesMsg = "";
-//
-//        Map<String, ?> keys = getPrefs(mContext).getAll();
-//        for (Map.Entry<String, ?> entry : keys.entrySet()) {
-//            Log.d("map values", entry.getKey() + ": " + entry.getValue().toString());
-//            if (entry.getKey().contains(GEO_PREFIX)) {
-//                allGeofencesMsg += entry.getValue().toString() + "\n\n\n";
-//            }
-//        }
-//
-//        if (allGeofencesMsg.equals("")) {
-//            allGeofencesMsg = "No Geofence Added.";
-//        }
-//
-//        displayDialog(allGeofencesMsg);
-//    }
     // Saving GeoFence marker with prefs mng
     private void saveGeofence() {
         Log.d(TAG, "saveGeofence()");
@@ -917,39 +795,6 @@ public class MainActivity extends AppCompatActivity implements
     public static String oldgetGeofenceLabel(Context context, String id) {
         return getPrefs(context).getString(id, "");
     }
-
-//    public void oldrecreateAllGeofences() {
-////        clearGeofencesViewList();
-//        GeofenceTransitionService gt = new GeofenceTransitionService();
-//        AlarmHelper.sendNotification(mContext, "Geofence recreated after boot.", 2221);
-//
-//        Map<String, ?> keys = getPrefs(mContext).getAll();
-//        String geoId;
-//        String geoContent;
-//        int c = 5;
-//        for (Map.Entry<String, ?> entry : keys.entrySet()) {
-//            Log.d("map values", entry.getKey() + ": " + entry.getValue().toString());
-//            geoId = RECREATE_PREFIX + entry.getKey();
-//            geoContent = entry.getValue().toString();
-////            geoContent = getPrefs(mContext).getString(geoId, "");
-//            if (geoId.contains(RECREATE_PREFIX)) {
-//                oldRecreateSingleGeofence(geoContent);
-//                AlarmHelper.sendNotification(mContext, geoContent, c);
-//                c += 1;
-//            }
-//        }
-//    }
-
-
-//    private static final String NOTIFICATION_MSG = "NOTIFICATION MSG";
-
-//    // Create a Intent send by the notification
-//    public static Intent makeNotificationIntent(Context context, String msg) {
-//        Intent intent = new Intent(context, MainActivity.class);
-//        intent.putExtra(NOTIFICATION_MSG, msg);
-//        return intent;
-//    }
-
 
 }
 
