@@ -2,9 +2,11 @@ package com.tinmegali.mylocation;
 
 import android.Manifest;
 import android.app.PendingIntent;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
@@ -13,6 +15,7 @@ import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
+import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -83,6 +86,8 @@ public class MainActivity extends AppCompatActivity implements
     private final static Locale locale = Locale.getDefault();
     private static final String PREF_NAME = "geoPrefs";
     public static final String IS_REBOOT_SIGNAL = "isSignalFromReboot";
+    public static final String REDRAW_CIRCLE_FILTER = "redrawCircleIntentFilter";
+    public static final String REDRAW_CIRCLE_INTENT_KEY = "redrawCircleIntentKey";
 
 //    SharedPreferences sharedPref = getPreferences(Context.MODE_PRIVATE);
 //    SharedPreferences.Editor editor = sharedPref.edit();
@@ -96,7 +101,6 @@ public class MainActivity extends AppCompatActivity implements
     private Circle geoFenceBorder;
     private GoogleMap map;
     private GoogleApiClient googleApiClient;
-    private static GoogleApiClient regoogleApiClient;
     private Location lastLocation;
 
     private EditText etPlaceLabel;
@@ -118,12 +122,21 @@ public class MainActivity extends AppCompatActivity implements
         setResources();
         createAutoCompleteFragment();
         initGMaps();
+        initBroadcastReceiver();
     }
 
-    @Override
-    protected void onResume() {
-        super.onResume();
+    private void initBroadcastReceiver() {
+        LocalBroadcastManager.getInstance(mContext).registerReceiver(
+                uiBroadcastReceiver, new IntentFilter(REDRAW_CIRCLE_FILTER));
     }
+
+    private BroadcastReceiver uiBroadcastReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            JSONObject geo = JsonHelper.strToJsonObject(intent.getStringExtra(REDRAW_CIRCLE_INTENT_KEY));
+            redrawCircle(geo.optDouble("lat"), geo.optDouble("lon"), geo.optInt("radius"));
+        }
+    };
 
     void setResources() {
         etPlaceLabel = (EditText) findViewById(R.id.et_place_label);
@@ -257,7 +270,7 @@ public class MainActivity extends AppCompatActivity implements
         };
     }
 
-    public void recreateGoogleApi() {
+    public void beginGeoCreationProcess() {
         AlarmHelper.sendNotification(mContext, "2nd reGoogleApi next.", 2222);
         if (googleApiClient == null) {
             googleApiClient = new GoogleApiClient.Builder(mContext)
@@ -308,7 +321,7 @@ public class MainActivity extends AppCompatActivity implements
         // Call GoogleApiClient connection when starting the Activity
 //        createGoogleApi();
 //        googleApiClient.connect();
-        recreateGoogleApi();
+        beginGeoCreationProcess();
     }
 
     @Override
