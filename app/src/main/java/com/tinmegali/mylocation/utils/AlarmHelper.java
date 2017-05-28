@@ -38,7 +38,9 @@ public class AlarmHelper {
                 .setContentText(message);
 
         if (NOTIF_ID == GeofenceTransitionService.GEOFENCE_NOTIFICATION_ID) {
-            mBuilder.setColor(Color.RED);
+            mBuilder.setColor(Color.RED)
+                    .setVibrate(new long[]{100, 100})
+                    .setLights(Color.WHITE, 3000, 3000);
         }
 
         if (!appIdToLaunch.equals("")) {

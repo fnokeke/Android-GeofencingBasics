@@ -82,6 +82,7 @@ public class MainActivity extends AppCompatActivity implements
     private static final String KEY_ALL_GEOFENCES = "allGeofences";
     private final static Locale locale = Locale.getDefault();
     private static final String PREF_NAME = "geoPrefs";
+    public static final String IS_REBOOT_SIGNAL = "isSignalFromReboot";
 
 //    SharedPreferences sharedPref = getPreferences(Context.MODE_PRIVATE);
 //    SharedPreferences.Editor editor = sharedPref.edit();
@@ -125,7 +126,11 @@ public class MainActivity extends AppCompatActivity implements
         setResources();
         createAutoCompleteFragment();
         initGMaps();
-        createGoogleApi();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
     }
 
     void setResources() {
@@ -235,12 +240,10 @@ public class MainActivity extends AppCompatActivity implements
 //        }
 //    };
 
-
-    // Create GoogleApiClient instance
     private void createGoogleApi() {
-        Log.d(TAG, "createGoogleApi()");
+        AlarmHelper.sendNotification(mContext, "CreateGoogleApi next.", 2222);
         if (googleApiClient == null) {
-            googleApiClient = new GoogleApiClient.Builder(mContext)
+            googleApiClient = new GoogleApiClient.Builder(this)
                     .addConnectionCallbacks(this)
                     .addOnConnectionFailedListener(this)
                     .addApi(LocationServices.API)
@@ -253,6 +256,7 @@ public class MainActivity extends AppCompatActivity implements
         super.onStart();
 
         // Call GoogleApiClient connection when starting the Activity
+        createGoogleApi();
         googleApiClient.connect();
     }
 
@@ -457,21 +461,20 @@ public class MainActivity extends AppCompatActivity implements
 //        writeActualLocation(location);
     }
 
-    // GoogleApiClient.ConnectionCallbacks connected
     @Override
     public void onConnected(@Nullable Bundle bundle) {
+        AlarmHelper.sendNotification(mContext, "onConnected follows.", 2222);
         Log.i(TAG, "onConnected()");
         getLastKnownLocation();
         recoverGeofenceMarker();
+        recreateAllGeofences();
     }
 
-    // GoogleApiClient.ConnectionCallbacks suspended
     @Override
     public void onConnectionSuspended(int i) {
         Log.w(TAG, "onConnectionSuspended()");
     }
 
-    // GoogleApiClient.OnConnectionFailedListener fail
     @Override
     public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
         Log.w(TAG, "onConnectionFailed()");
@@ -612,9 +615,14 @@ public class MainActivity extends AppCompatActivity implements
     // Add the created GeofenceRequest to the device's monitoring list
     private void addGeofence(GeofencingRequest request) {
         Log.d(TAG, "addGeofence");
-        createGoogleApi();
         if (checkPermission())
-            LocationServices.GeofencingApi.addGeofences(googleApiClient, request, createGeofencePendingIntent()).setResultCallback(this);
+            LocationServices.GeofencingApi.addGeofences(googleApiClient, request,
+                    createGeofencePendingIntent()).setResultCallback(new ResultCallback<Status>() {
+                @Override
+                public void onResult(@NonNull Status status) {
+                    workOnCallback(status);
+                }
+            });
     }
 
     // Create a Geofence Request
@@ -628,6 +636,10 @@ public class MainActivity extends AppCompatActivity implements
 
     @Override
     public void onResult(@NonNull Status status) {
+        workOnCallback(status);
+    }
+
+    private void workOnCallback(Status status) {
         Log.i(TAG, "onResult: " + status);
         if (status.isSuccess()) {
             Toast.makeText(MainActivity.this, "Geofence Successfully created.", Toast.LENGTH_LONG).show();

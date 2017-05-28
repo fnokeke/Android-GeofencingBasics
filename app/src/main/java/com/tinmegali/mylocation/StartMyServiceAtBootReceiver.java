@@ -9,9 +9,9 @@ public class StartMyServiceAtBootReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
         if (Intent.ACTION_BOOT_COMPLETED.equals(intent.getAction())) {
-            MainActivity mainActivity = new MainActivity();
-            mainActivity.setContext(context);
-            mainActivity.recreateAllGeofences();
+            Intent in = new Intent(context, MainActivity.class);
+            in.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            context.startActivity(in);
         }
 
     }
