@@ -96,6 +96,7 @@ public class MainActivity extends AppCompatActivity implements
     private Circle geoFenceBorder;
     private GoogleMap map;
     private GoogleApiClient googleApiClient;
+    private static GoogleApiClient regoogleApiClient;
     private Location lastLocation;
 
     private EditText etPlaceLabel;
@@ -104,15 +105,6 @@ public class MainActivity extends AppCompatActivity implements
     Context mContext;
 
     MapFragment mapFragment;
-
-//    private static final String NOTIFICATION_MSG = "NOTIFICATION MSG";
-
-//    // Create a Intent send by the notification
-//    public static Intent makeNotificationIntent(Context context, String msg) {
-//        Intent intent = new Intent(context, MainActivity.class);
-//        intent.putExtra(NOTIFICATION_MSG, msg);
-//        return intent;
-//    }
 
     public void setContext(Context context) {
         mContext = context;
@@ -240,7 +232,44 @@ public class MainActivity extends AppCompatActivity implements
 //        }
 //    };
 
-    private void createGoogleApi() {
+    private GoogleApiClient.ConnectionCallbacks getGoogleCallback() {
+        return new GoogleApiClient.ConnectionCallbacks() {
+            @Override
+            public void onConnected(@Nullable Bundle bundle) {
+                AlarmHelper.sendNotification(mContext, "boss mode activated", 5454);
+                recreateAllGeofences();
+            }
+
+            @Override
+            public void onConnectionSuspended(int i) {
+                AlarmHelper.sendNotification(mContext, "boss suspended", 5455);
+
+            }
+        };
+    }
+
+    private GoogleApiClient.OnConnectionFailedListener getOnConnectionFailedListener() {
+        return new GoogleApiClient.OnConnectionFailedListener() {
+            @Override
+            public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
+                AlarmHelper.sendNotification(mContext, "boss failed", 5459);
+            }
+        };
+    }
+
+    public void recreateGoogleApi() {
+        AlarmHelper.sendNotification(mContext, "2nd reGoogleApi next.", 2222);
+        if (googleApiClient == null) {
+            googleApiClient = new GoogleApiClient.Builder(mContext)
+                    .addConnectionCallbacks(getGoogleCallback())
+                    .addOnConnectionFailedListener(getOnConnectionFailedListener())
+                    .addApi(LocationServices.API)
+                    .build();
+        }
+        googleApiClient.connect();
+    }
+
+    public void createGoogleApi() {
         AlarmHelper.sendNotification(mContext, "CreateGoogleApi next.", 2222);
         if (googleApiClient == null) {
             googleApiClient = new GoogleApiClient.Builder(this)
@@ -252,12 +281,34 @@ public class MainActivity extends AppCompatActivity implements
     }
 
     @Override
+    public void onConnected(@Nullable Bundle bundle) {
+        AlarmHelper.sendNotification(mContext, "onConnected follows.", 2222);
+        Log.i(TAG, "onConnected()");
+        getLastKnownLocation();
+        recoverGeofenceMarker();
+//        recreateAllGeofences();
+        AlarmHelper.sendNotification(mContext, "googleapi onConnected", 5459);
+    }
+
+    @Override
+    public void onConnectionSuspended(int i) {
+        Log.w(TAG, "onConnectionSuspended()");
+    }
+
+    @Override
+    public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
+        Log.w(TAG, "onConnectionFailed()");
+    }
+
+
+    @Override
     protected void onStart() {
         super.onStart();
 
         // Call GoogleApiClient connection when starting the Activity
-        createGoogleApi();
-        googleApiClient.connect();
+//        createGoogleApi();
+//        googleApiClient.connect();
+        recreateGoogleApi();
     }
 
     @Override
@@ -265,7 +316,7 @@ public class MainActivity extends AppCompatActivity implements
         super.onStop();
 
         // Disconnect GoogleApiClient when stopping Activity
-        googleApiClient.disconnect();
+//        googleApiClient.disconnect();
     }
 
     @Override
@@ -290,23 +341,6 @@ public class MainActivity extends AppCompatActivity implements
         return super.onOptionsItemSelected(item);
     }
 
-//    private void oldviewGeofences() {
-//        String allGeofencesMsg = "";
-//
-//        Map<String, ?> keys = getPrefs(mContext).getAll();
-//        for (Map.Entry<String, ?> entry : keys.entrySet()) {
-//            Log.d("map values", entry.getKey() + ": " + entry.getValue().toString());
-//            if (entry.getKey().contains(GEO_PREFIX)) {
-//                allGeofencesMsg += entry.getValue().toString() + "\n\n\n";
-//            }
-//        }
-//
-//        if (allGeofencesMsg.equals("")) {
-//            allGeofencesMsg = "No Geofence Added.";
-//        }
-//
-//        displayDialog(allGeofencesMsg);
-//    }
 
     private void viewAllGeofences() {
         JSONObject allGeofences = getSavedGeofences();
@@ -459,25 +493,6 @@ public class MainActivity extends AppCompatActivity implements
         Log.d(TAG, "onLocationChanged [" + location + "]");
         lastLocation = location;
 //        writeActualLocation(location);
-    }
-
-    @Override
-    public void onConnected(@Nullable Bundle bundle) {
-        AlarmHelper.sendNotification(mContext, "onConnected follows.", 2222);
-        Log.i(TAG, "onConnected()");
-        getLastKnownLocation();
-        recoverGeofenceMarker();
-        recreateAllGeofences();
-    }
-
-    @Override
-    public void onConnectionSuspended(int i) {
-        Log.w(TAG, "onConnectionSuspended()");
-    }
-
-    @Override
-    public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
-        Log.w(TAG, "onConnectionFailed()");
     }
 
     // Get last known location
@@ -642,7 +657,7 @@ public class MainActivity extends AppCompatActivity implements
     private void workOnCallback(Status status) {
         Log.i(TAG, "onResult: " + status);
         if (status.isSuccess()) {
-            Toast.makeText(MainActivity.this, "Geofence Successfully created.", Toast.LENGTH_LONG).show();
+            Toast.makeText(mContext, "Geofence Successfully created.", Toast.LENGTH_LONG).show();
 
             JSONObject geo = getGeofenceToSave();
             String pID = geo.optString("id");
@@ -707,6 +722,8 @@ public class MainActivity extends AppCompatActivity implements
 
 
     void redrawCircle(double lat, double lon, int radius) {
+        if (map == null) return; // MainActivity view not active
+
         if (geoFenceBorder != null)
             geoFenceBorder.remove();
 
@@ -827,6 +844,55 @@ public class MainActivity extends AppCompatActivity implements
     }
 
 
+    private void oldRecreateSingleGeofence(String geoContent) {
+        JSONObject geo;
+        if (geoContent.equals("")) return;
+        try {
+            geo = new JSONObject(geoContent);
+            createGeofence(
+                    geo.optString("id"),
+                    geo.optString("placeLabel"),
+                    geo.optString("address"),
+                    new LatLng(geo.optDouble("lat"), geo.optDouble("lon")),
+                    geo.optInt("radius"));
+        } catch (JSONException e) {
+            Log.e(TAG, "oldRecreateSingleGeofence: json-exception: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    //    private void oldviewGeofences() {
+//        String allGeofencesMsg = "";
+//
+//        Map<String, ?> keys = getPrefs(mContext).getAll();
+//        for (Map.Entry<String, ?> entry : keys.entrySet()) {
+//            Log.d("map values", entry.getKey() + ": " + entry.getValue().toString());
+//            if (entry.getKey().contains(GEO_PREFIX)) {
+//                allGeofencesMsg += entry.getValue().toString() + "\n\n\n";
+//            }
+//        }
+//
+//        if (allGeofencesMsg.equals("")) {
+//            allGeofencesMsg = "No Geofence Added.";
+//        }
+//
+//        displayDialog(allGeofencesMsg);
+//    }
+    // Saving GeoFence marker with prefs mng
+    private void saveGeofence() {
+        Log.d(TAG, "saveGeofence()");
+//        SharedPreferences sharedPref = getPreferences(Context.MODE_PRIVATE);
+//        SharedPreferences.Editor editor = sharedPref.edit();
+
+//        editor.putLong(OLD_KEY_GEOFENCE_LAT, Double.doubleToRawLongBits(geoFenceMarker.getPosition().latitude));
+//        editor.putLong(OLD_KEY_GEOFENCE_LON, Double.doubleToRawLongBits(geoFenceMarker.getPosition().longitude));
+//        editor.apply();
+    }
+
+    public static String oldgetGeofenceLabel(Context context, String id) {
+        return getPrefs(context).getString(id, "");
+    }
+
     public void oldrecreateAllGeofences() {
         clearGeofencesViewList();
         GeofenceTransitionService gt = new GeofenceTransitionService();
@@ -849,37 +915,17 @@ public class MainActivity extends AppCompatActivity implements
         }
     }
 
-    private void oldRecreateSingleGeofence(String geoContent) {
-        JSONObject geo;
-        if (geoContent.equals("")) return;
-        try {
-            geo = new JSONObject(geoContent);
-            createGeofence(
-                    geo.optString("id"),
-                    geo.optString("placeLabel"),
-                    geo.optString("address"),
-                    new LatLng(geo.optDouble("lat"), geo.optDouble("lon")),
-                    geo.optInt("radius"));
-        } catch (JSONException e) {
-            Log.e(TAG, "oldRecreateSingleGeofence: json-exception: " + e.getMessage());
-            e.printStackTrace();
-        }
-    }
 
-    // Saving GeoFence marker with prefs mng
-    private void saveGeofence() {
-        Log.d(TAG, "saveGeofence()");
-//        SharedPreferences sharedPref = getPreferences(Context.MODE_PRIVATE);
-//        SharedPreferences.Editor editor = sharedPref.edit();
+//    private static final String NOTIFICATION_MSG = "NOTIFICATION MSG";
 
-//        editor.putLong(OLD_KEY_GEOFENCE_LAT, Double.doubleToRawLongBits(geoFenceMarker.getPosition().latitude));
-//        editor.putLong(OLD_KEY_GEOFENCE_LON, Double.doubleToRawLongBits(geoFenceMarker.getPosition().longitude));
-//        editor.apply();
-    }
+//    // Create a Intent send by the notification
+//    public static Intent makeNotificationIntent(Context context, String msg) {
+//        Intent intent = new Intent(context, MainActivity.class);
+//        intent.putExtra(NOTIFICATION_MSG, msg);
+//        return intent;
+//    }
 
-    public static String oldgetGeofenceLabel(Context context, String id) {
-        return getPrefs(context).getString(id, "");
-    }
 
 }
+
 // TODO: 5/27/17 avoid showing duplicate list of the same addresses / check if address has already been added before adding new one
