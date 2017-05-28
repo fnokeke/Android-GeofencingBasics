@@ -85,6 +85,7 @@
                     android:layout_weight="1"
                     android:background="@color/colorPrimary"
                     android:text="@string/btn_save_label"
+                    android:textColor="@color/white"
                     android:textStyle="bold" />
 
 
