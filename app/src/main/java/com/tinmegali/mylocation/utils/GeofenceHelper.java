@@ -37,7 +37,7 @@ public class GeofenceHelper {
     private Context mContext;
     private GoogleApiClient googleApiClient;
     private Stack<JSONObject> stack;
-    private static final int GEO_DWELL_TIME = 0;
+    private static final int GEO_DWELL_TIME_MILLIS = 5 * 60 * 1000;
     private PendingIntent geoFencePendingIntent;
 
     public GeofenceHelper(Context context) {
@@ -122,7 +122,7 @@ public class GeofenceHelper {
                 .setRequestId(geo.optString("id"))
                 .setCircularRegion(geo.optDouble("lat"), geo.optDouble("lon"), geo.optInt("radius"))
                 .setExpirationDuration(Geofence.NEVER_EXPIRE)
-                .setLoiteringDelay(GEO_DWELL_TIME)
+                .setLoiteringDelay(GEO_DWELL_TIME_MILLIS)
                 .setTransitionTypes(Geofence.GEOFENCE_TRANSITION_ENTER | Geofence.GEOFENCE_TRANSITION_EXIT)
                 .build();
 
