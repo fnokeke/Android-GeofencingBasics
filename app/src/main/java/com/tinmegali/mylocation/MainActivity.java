@@ -9,7 +9,6 @@ import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
-import android.location.Location;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
@@ -26,14 +25,7 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
 
-import com.google.android.gms.common.api.GoogleApiClient;
-import com.google.android.gms.common.api.ResultCallback;
 import com.google.android.gms.common.api.Status;
-import com.google.android.gms.location.Geofence;
-import com.google.android.gms.location.GeofencingRequest;
-import com.google.android.gms.location.LocationListener;
-import com.google.android.gms.location.LocationRequest;
-import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.location.places.Place;
 import com.google.android.gms.location.places.ui.PlaceAutocompleteFragment;
 import com.google.android.gms.location.places.ui.PlaceSelectionListener;
@@ -50,7 +42,6 @@ import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.tinmegali.mylocation.utils.GeofenceHelper;
 import com.tinmegali.mylocation.utils.JsonHelper;
-import com.tinmegali.mylocation.utils.Store;
 
 import org.json.JSONObject;
 
@@ -58,12 +49,7 @@ import java.util.Locale;
 
 import static com.tinmegali.mylocation.R.id.geofence;
 
-public class MainActivity extends AppCompatActivity implements
-        LocationListener,
-        OnMapReadyCallback,
-        GoogleMap.OnMapClickListener,
-        GoogleMap.OnMarkerClickListener,
-        ResultCallback<Status> {
+public class MainActivity extends AppCompatActivity implements OnMapReadyCallback {
 
     private static final String TAG = MainActivity.class.getSimpleName();
 
@@ -78,6 +64,8 @@ public class MainActivity extends AppCompatActivity implements
     public static final String REDRAW_CONTENT_KEY = "redrawContent";
     public static final String ACTION_REDRAW_CIRCLE = "redrawCircleIntentKey";
     public static final String ACTION_REMOVE_CIRCLE = "removeDrawCircleIntentKey";
+
+    private Marker locationMarker;
     private final static Locale locale = Locale.getDefault();
 
     CircleOptions mCircleOptions = new CircleOptions();
@@ -92,10 +80,6 @@ public class MainActivity extends AppCompatActivity implements
     private GeofenceHelper geofenceHelper;
 
     MapFragment mapFragment;
-
-    public void setContext(Context context) {
-        mContext = context;
-    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -216,9 +200,12 @@ public class MainActivity extends AppCompatActivity implements
 
             String radiusStr = etPlaceRadius.getText().toString();
             Integer radius = radiusStr.equals("") ? 150 : Integer.parseInt(radiusStr);
-            radius = radius < 100 ? 150 : radius;
+            radius = radius < 150 ? 150 : radius;
+//            etPlaceRadius.setText(String.valueOf(radius));
+
             String label = etPlaceLabel.getText().toString();
-            label = label.equals("") ? String.format("%s, %s", lat, lon) : label;
+            label = label.equals("") ? String.format("%s..", lastPlaceSaved.optString("address").substring(0,7)) : label;
+//            etPlaceLabel.setText(label);
 
             JSONObject geo = new JSONObject();
             JsonHelper.setJSONValue(geo, "id", lastPlaceSaved.optString("id"));
@@ -334,35 +321,12 @@ public class MainActivity extends AppCompatActivity implements
         }
     }
 
-    // Callback called when Map is ready
     @Override
     public void onMapReady(GoogleMap googleMap) {
         Log.d(TAG, "onMapReady()");
         map = googleMap;
-        map.setOnMapClickListener(this);
-        map.setOnMarkerClickListener(this);
     }
 
-    @Override
-    public void onMapClick(LatLng latLng) {
-//        Log.d(TAG, "onMapClick(" + latLng + ")");
-//        markerForGeofence(latLng);
-    }
-
-    @Override
-    public boolean onMarkerClick(Marker marker) {
-        Log.d(TAG, "onMarkerClickListener: " + marker.getPosition());
-        return false;
-    }
-
-    @Override
-    public void onLocationChanged(Location location) {
-        Log.d(TAG, "onLocationChanged [" + location + "]");
-        Location lastLocation = location;
-//        writeActualLocation(location);
-    }
-
-    private Marker locationMarker;
 
     private void markerLocation(String title, LatLng latLng) {
         Log.i(TAG, "markerLocation(" + latLng + ")");
@@ -399,16 +363,12 @@ public class MainActivity extends AppCompatActivity implements
         }
     }
 
-    private static final float GEOFENCE_RADIUS = 200.0f; // in meters
-
-    @Override
-    public void onResult(@NonNull Status status) { }
-
 
     void drawCircle(LatLng latLng) {
         if (geoFenceBorder != null)
             geoFenceBorder.remove();
 
+        final float GEOFENCE_RADIUS = 200.0f; // in meters
         mCircleOptions
                 .center(latLng)
                 .strokeColor(Color.argb(50, 70, 70, 70))
