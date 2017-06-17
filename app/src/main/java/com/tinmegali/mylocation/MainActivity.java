@@ -79,13 +79,10 @@ public class MainActivity extends AppCompatActivity implements
     private static final String LAST_PLACE_LAT = "geofenceLat";
     private static final String LAST_PLACE_LON = "geofenceLon";
     private static final String GEO_PREFIX = "geo-";
-    private static final String RECREATE_PREFIX = "recreate-";
 
     private static final String KEY_GEOFENCE_RADIUS = "geofenceRadius";
-    private static final String KEY_ALL_GEOFENCES = "allGeofences";
     private final static Locale locale = Locale.getDefault();
     private static final String PREF_NAME = "geoPrefs";
-    public static final String IS_REBOOT_SIGNAL = "isSignalFromReboot";
     public static final String REDRAW_CIRCLE_FILTER = "redrawCircleIntentFilter";
     public static final String REDRAW_TYPE_KEY = "redrawType";
     public static final String REDRAW_CONTENT_KEY = "redrawContent" ;
@@ -93,7 +90,6 @@ public class MainActivity extends AppCompatActivity implements
     public static final String ACTION_REMOVE_CIRCLE = "removeDrawCircleIntentKey";
 
     private PendingIntent geoFencePendingIntent;
-    private final int GEOFENCE_REQ_CODE = 0;
     JSONObject mGeo = new JSONObject();
 
 
@@ -131,6 +127,39 @@ public class MainActivity extends AppCompatActivity implements
         initGeofence();
         initBroadcastReceiver();
         if (!checkPermission()) askPermission();
+    }
+
+    private void initAutoCompleteFragment() {
+        PlaceAutocompleteFragment autocompleteFragment = (PlaceAutocompleteFragment)
+                getFragmentManager().findFragmentById(R.id.place_autocomplete_fragment);
+
+        autocompleteFragment.setOnPlaceSelectedListener(new PlaceSelectionListener() {
+            @Override
+            public void onPlaceSelected(Place place) {
+                // TODO: Get info about the selected place.
+                Log.i(TAG, "Place: " + place.getName());
+                Log.i(TAG, "Place: " + place.getLatLng());
+
+                LatLng latlng = place.getLatLng();
+                float lat = (float) latlng.latitude;
+                float lon = (float) latlng.longitude;
+                String address = place.getAddress().toString();
+                String id = place.getId();
+                saveAsLastPlaceSearched(lat, lon, address, id);
+
+                LatLng latLng = new LatLng(place.getLatLng().latitude, place.getLatLng().longitude);
+                markerForGeofence(latLng);
+                drawCircle(latLng);
+                markerLocation(place.getAddress().toString(), latLng);
+            }
+
+            @Override
+            public void onError(Status status) {
+                // TODO: Handle the error.
+                Log.i(TAG, "An error occurred: " + status);
+            }
+        });
+
     }
 
     private void initGMaps() {
@@ -223,39 +252,6 @@ public class MainActivity extends AppCompatActivity implements
 
         }
     };
-
-    void initAutoCompleteFragment() {
-        PlaceAutocompleteFragment autocompleteFragment = (PlaceAutocompleteFragment)
-                getFragmentManager().findFragmentById(R.id.place_autocomplete_fragment);
-
-        autocompleteFragment.setOnPlaceSelectedListener(new PlaceSelectionListener() {
-            @Override
-            public void onPlaceSelected(Place place) {
-                // TODO: Get info about the selected place.
-                Log.i(TAG, "Place: " + place.getName());
-                Log.i(TAG, "Place: " + place.getLatLng());
-
-                LatLng latlng = place.getLatLng();
-                float lat = (float) latlng.latitude;
-                float lon = (float) latlng.longitude;
-                String address = place.getAddress().toString();
-                String id = place.getId();
-                saveAsLastPlaceSearched(lat, lon, address, id);
-
-                LatLng latLng = new LatLng(place.getLatLng().latitude, place.getLatLng().longitude);
-                markerForGeofence(latLng);
-                drawCircle(latLng);
-                markerLocation(place.getAddress().toString(), latLng);
-            }
-
-            @Override
-            public void onError(Status status) {
-                // TODO: Handle the error.
-                Log.i(TAG, "An error occurred: " + status);
-            }
-        });
-
-    }
 
     void storeRadius(Context context, int radius) {
         getEditor(context).putInt(KEY_GEOFENCE_RADIUS, radius).apply();
@@ -678,6 +674,7 @@ public class MainActivity extends AppCompatActivity implements
             return geoFencePendingIntent;
 
         Intent intent = new Intent(mContext, GeofenceTransitionService.class);
+        int GEOFENCE_REQ_CODE = 0;
         return PendingIntent.getService(mContext, GEOFENCE_REQ_CODE, intent, PendingIntent.FLAG_UPDATE_CURRENT);
     }
 

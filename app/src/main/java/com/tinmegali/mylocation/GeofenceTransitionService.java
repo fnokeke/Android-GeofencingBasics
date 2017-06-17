@@ -33,8 +33,7 @@ public class GeofenceTransitionService extends IntentService {
         if (geofencingEvent.hasError()) {
             String errorMsg = getErrorString(geofencingEvent.getErrorCode());
             Log.e(TAG, "onHandleIntent: error: " + errorMsg);
-            AlarmHelper.sendNotification(this, "Error onHandleIntent: " + errorMsg, 4444);
-            AlarmHelper.sendNotification(this, "Error onHandleIntent: " + errorMsg, 4444);
+            AlarmHelper.sendNotification(this, "GeoPlaces requires location.", 4444);
             return;
         }
 
