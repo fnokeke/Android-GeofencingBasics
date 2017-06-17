@@ -201,11 +201,11 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             String radiusStr = etPlaceRadius.getText().toString();
             Integer radius = radiusStr.equals("") ? 150 : Integer.parseInt(radiusStr);
             radius = radius < 150 ? 150 : radius;
-//            etPlaceRadius.setText(String.valueOf(radius));
+            etPlaceRadius.setText(String.valueOf(radius));
 
             String label = etPlaceLabel.getText().toString();
             label = label.equals("") ? String.format("%s..", lastPlaceSaved.optString("address").substring(0,7)) : label;
-//            etPlaceLabel.setText(label);
+            etPlaceLabel.setText(label);
 
             JSONObject geo = new JSONObject();
             JsonHelper.setJSONValue(geo, "id", lastPlaceSaved.optString("id"));
