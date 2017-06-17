@@ -13,7 +13,6 @@ import android.graphics.Color;
 import android.location.Location;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.content.LocalBroadcastManager;
@@ -28,7 +27,6 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
 
-import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.common.api.ResultCallback;
 import com.google.android.gms.common.api.Status;
@@ -51,12 +49,10 @@ import com.google.android.gms.maps.model.CircleOptions;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
-import com.tinmegali.mylocation.utils.AlarmHelper;
 import com.tinmegali.mylocation.utils.GeofenceHelper;
 import com.tinmegali.mylocation.utils.JsonHelper;
 import com.tinmegali.mylocation.utils.Store;
 
-import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.Locale;
@@ -64,8 +60,8 @@ import java.util.Locale;
 import static com.tinmegali.mylocation.R.id.geofence;
 
 public class MainActivity extends AppCompatActivity implements
-        GoogleApiClient.ConnectionCallbacks,
-        GoogleApiClient.OnConnectionFailedListener,
+//        GoogleApiClient.ConnectionCallbacks,
+//        GoogleApiClient.OnConnectionFailedListener,
         LocationListener,
         OnMapReadyCallback,
         GoogleMap.OnMapClickListener,
@@ -85,7 +81,7 @@ public class MainActivity extends AppCompatActivity implements
     private static final String PREF_NAME = "geoPrefs";
     public static final String REDRAW_CIRCLE_FILTER = "redrawCircleIntentFilter";
     public static final String REDRAW_TYPE_KEY = "redrawType";
-    public static final String REDRAW_CONTENT_KEY = "redrawContent" ;
+    public static final String REDRAW_CONTENT_KEY = "redrawContent";
     public static final String ACTION_REDRAW_CIRCLE = "redrawCircleIntentKey";
     public static final String ACTION_REMOVE_CIRCLE = "removeDrawCircleIntentKey";
 
@@ -130,16 +126,10 @@ public class MainActivity extends AppCompatActivity implements
     }
 
     private void initAutoCompleteFragment() {
-        PlaceAutocompleteFragment autocompleteFragment = (PlaceAutocompleteFragment)
-                getFragmentManager().findFragmentById(R.id.place_autocomplete_fragment);
-
+        PlaceAutocompleteFragment autocompleteFragment = (PlaceAutocompleteFragment) getFragmentManager().findFragmentById(R.id.place_autocomplete_fragment);
         autocompleteFragment.setOnPlaceSelectedListener(new PlaceSelectionListener() {
             @Override
             public void onPlaceSelected(Place place) {
-                // TODO: Get info about the selected place.
-                Log.i(TAG, "Place: " + place.getName());
-                Log.i(TAG, "Place: " + place.getLatLng());
-
                 LatLng latlng = place.getLatLng();
                 float lat = (float) latlng.latitude;
                 float lon = (float) latlng.longitude;
@@ -159,7 +149,15 @@ public class MainActivity extends AppCompatActivity implements
                 Log.i(TAG, "An error occurred: " + status);
             }
         });
+    }
 
+    private void saveAsLastPlaceSearched(float lat, float lon, String address, String id) {
+        SharedPreferences.Editor editor = getEditor(mContext);
+        editor.putFloat(LAST_PLACE_LAT, lat);
+        editor.putFloat(LAST_PLACE_LON, lon);
+        editor.putString(LAST_PLACE_ADDRESS, address);
+        editor.putString(LAST_PLACE_ID, id);
+        editor.apply();
     }
 
     private void initGMaps() {
@@ -214,14 +212,10 @@ public class MainActivity extends AppCompatActivity implements
     JSONObject getLastPlaceSearched() {
         JSONObject place = new JSONObject();
         SharedPreferences sharedPref = getPrefs(mContext);
-        try {
-            place.put("id", sharedPref.getString(LAST_PLACE_ID, "defaultLabel"));
-            place.put("address", sharedPref.getString(LAST_PLACE_ADDRESS, "defaultLabel"));
-            place.put("lat", (double) sharedPref.getFloat(LAST_PLACE_LAT, -1));
-            place.put("lon", (double) sharedPref.getFloat(LAST_PLACE_LON, -1));
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
+        JsonHelper.setJSONValue(place, "id", sharedPref.getString(LAST_PLACE_ID, "defaultLabel"));
+        JsonHelper.setJSONValue(place, "address", sharedPref.getString(LAST_PLACE_ADDRESS, "defaultLabel"));
+        JsonHelper.setJSONValue(place, "lat", (double) sharedPref.getFloat(LAST_PLACE_LAT, -1));
+        JsonHelper.setJSONValue(place, "lon", (double) sharedPref.getFloat(LAST_PLACE_LON, -1));
         return place;
     }
 
@@ -230,7 +224,6 @@ public class MainActivity extends AppCompatActivity implements
             JSONObject lastPlaceSaved = getLastPlaceSearched();
             double lat = lastPlaceSaved.optDouble("lat");
             double lon = lastPlaceSaved.optDouble("lon");
-            LatLng latLng = new LatLng(lat, lon);
 
             String radiusStr = etPlaceRadius.getText().toString();
             Integer radius = radiusStr.equals("") ? 150 : Integer.parseInt(radiusStr);
@@ -253,55 +246,24 @@ public class MainActivity extends AppCompatActivity implements
         }
     };
 
-    void storeRadius(Context context, int radius) {
-        getEditor(context).putInt(KEY_GEOFENCE_RADIUS, radius).apply();
-    }
-
-
-    private GoogleApiClient.ConnectionCallbacks getGoogleCallback() {
-        return new GoogleApiClient.ConnectionCallbacks() {
-            @Override
-            public void onConnected(@Nullable Bundle bundle) {
-                AlarmHelper.sendNotification(mContext, "boss mode activated", 5454);
-//                recreateAllGeofences();
-            }
-
-            @Override
-            public void onConnectionSuspended(int i) {
-                AlarmHelper.sendNotification(mContext, "boss suspended", 5455);
-
-            }
-        };
-    }
-
-    private GoogleApiClient.OnConnectionFailedListener getOnConnectionFailedListener() {
-        return new GoogleApiClient.OnConnectionFailedListener() {
-            @Override
-            public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
-                AlarmHelper.sendNotification(mContext, "boss failed", 5459);
-            }
-        };
-    }
-
-    @Override
-    public void onConnected(@Nullable Bundle bundle) {
-        AlarmHelper.sendNotification(mContext, "onConnected follows.", 2222);
-        Log.i(TAG, "onConnected()");
-        getLastKnownLocation();
-        recoverGeofenceMarker();
-//        recreateAllGeofences();
-        AlarmHelper.sendNotification(mContext, "googleapi onConnected", 5459);
-    }
-
-    @Override
-    public void onConnectionSuspended(int i) {
-        Log.w(TAG, "onConnectionSuspended()");
-    }
-
-    @Override
-    public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
-        Log.w(TAG, "onConnectionFailed()");
-    }
+//    @Override
+//    public void onConnected(@Nullable Bundle bundle) {
+//        AlarmHelper.sendNotification(mContext, "onConnected follows.", 2222);
+//        Log.i(TAG, "onConnected()");
+//        getLastKnownLocation();
+//        recoverGeofenceMarker();
+//        AlarmHelper.sendNotification(mContext, "googleapi onConnected", 5459);
+//    }
+//
+//    @Override
+//    public void onConnectionSuspended(int i) {
+//        Log.w(TAG, "onConnectionSuspended()");
+//    }
+//
+//    @Override
+//    public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
+//        Log.w(TAG, "onConnectionFailed()");
+//    }
 
 
     @Override
@@ -376,22 +338,12 @@ public class MainActivity extends AppCompatActivity implements
 
     private final int REQ_PERMISSION = 999;
 
-    // Check for permission to access Location
     private boolean checkPermission() {
-        Log.d(TAG, "checkPermission()");
-        // Ask for permission if it wasn't granted yet
-        return (ContextCompat.checkSelfPermission(mContext, Manifest.permission.ACCESS_FINE_LOCATION)
-                == PackageManager.PERMISSION_GRANTED);
+        return (ContextCompat.checkSelfPermission(mContext, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED);
     }
 
-    // Asks for permission
     private void askPermission() {
-        Log.d(TAG, "askPermission()");
-        ActivityCompat.requestPermissions(
-                this,
-                new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
-                REQ_PERMISSION
-        );
+        ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, REQ_PERMISSION);
     }
 
     // Verify user's response of the permission requested
@@ -401,26 +353,15 @@ public class MainActivity extends AppCompatActivity implements
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         switch (requestCode) {
             case REQ_PERMISSION: {
-                if (grantResults.length > 0
-                        && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    // Permission granted
-//                    getLastKnownLocation();
-
+                if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    Toast.makeText(mContext, "Successful! Add your new places (Home, Work...)", Toast.LENGTH_SHORT).show();
                 } else {
-                    // Permission denied
-                    permissionsDenied();
+                    Toast.makeText(mContext, "App will not work unless you grant location permission. Try Again", Toast.LENGTH_LONG).show();
                 }
                 break;
             }
         }
     }
-
-    // App cannot work without the permissions
-    private void permissionsDenied() {
-        Log.w(TAG, "permissionsDenied()");
-        // TODO close app and warn user
-    }
-
 
     // Callback called when Map is ready
     @Override
@@ -443,23 +384,23 @@ public class MainActivity extends AppCompatActivity implements
         return false;
     }
 
-    private LocationRequest locationRequest;
-    // Defined in mili seconds.
-    // This number in extremely low, and should be used only for debug
-    private final int UPDATE_INTERVAL = 15 * 60 * 1000;
-    private final int FASTEST_INTERVAL = 15 * 60 * 900;
+//    private LocationRequest locationRequest;
+//    // Defined in mili seconds.
+//    // This number in extremely low, and should be used only for debug
+//    private final int UPDATE_INTERVAL = 15 * 60 * 1000;
+//    private final int FASTEST_INTERVAL = 15 * 60 * 900;
 
     // Start location Updates
-    private void startLocationUpdates() {
-        Log.i(TAG, "startLocationUpdates()");
-        locationRequest = LocationRequest.create()
-                .setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY)
-                .setInterval(UPDATE_INTERVAL)
-                .setFastestInterval(FASTEST_INTERVAL);
-
-        if (checkPermission())
-            LocationServices.FusedLocationApi.requestLocationUpdates(googleApiClient, locationRequest, this);
-    }
+//    private void startLocationUpdates() {
+//        Log.i(TAG, "startLocationUpdates()");
+//        locationRequest = LocationRequest.create()
+//                .setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY)
+//                .setInterval(UPDATE_INTERVAL)
+//                .setFastestInterval(FASTEST_INTERVAL);
+//
+//        if (checkPermission())
+//            LocationServices.FusedLocationApi.requestLocationUpdates(googleApiClient, locationRequest, this);
+//    }
 
     @Override
     public void onLocationChanged(Location location) {
@@ -469,22 +410,22 @@ public class MainActivity extends AppCompatActivity implements
     }
 
     // Get last known location
-    private void getLastKnownLocation() {
-        Log.d(TAG, "getLastKnownLocation()");
-        if (checkPermission()) {
-            lastLocation = LocationServices.FusedLocationApi.getLastLocation(googleApiClient);
-            if (lastLocation != null) {
-                Log.i(TAG, "LasKnown location. " +
-                        "Long: " + lastLocation.getLongitude() +
-                        " | Lat: " + lastLocation.getLatitude());
-                writeLastLocation();
-                startLocationUpdates();
-            } else {
-                Log.w(TAG, "No location retrieved yet");
-                startLocationUpdates();
-            }
-        } else askPermission();
-    }
+//    private void getLastKnownLocation() {
+//        Log.d(TAG, "getLastKnownLocation()");
+//        if (checkPermission()) {
+//            lastLocation = LocationServices.FusedLocationApi.getLastLocation(googleApiClient);
+//            if (lastLocation != null) {
+//                Log.i(TAG, "LasKnown location. " +
+//                        "Long: " + lastLocation.getLongitude() +
+//                        " | Lat: " + lastLocation.getLatitude());
+//                writeLastLocation();
+//                startLocationUpdates();
+//            } else {
+//                Log.w(TAG, "No location retrieved yet");
+//                startLocationUpdates();
+//            }
+//        } else askPermission();
+//    }
 
     private void writeActualLocation(Location location) {
 //        textLat.setText("Lat: " + location.getLatitude());
@@ -708,18 +649,6 @@ public class MainActivity extends AppCompatActivity implements
         geoFenceBorder = map.addCircle(mCircleOptions);
     }
 
-    private void saveAsLastPlaceSearched(float lat, float lon, String address, String id) {
-        Log.d(TAG, "saveAsLastPlaceSearched()");
-//        SharedPreferences sharedPref = getPreferences(Context.MODE_PRIVATE);
-//        SharedPreferences.Editor editor = sharedPref.edit();
-        SharedPreferences.Editor editor = getEditor(mContext);
-        editor.putFloat(LAST_PLACE_LAT, lat);
-        editor.putFloat(LAST_PLACE_LON, lon);
-        editor.putString(LAST_PLACE_ADDRESS, address);
-        editor.putString(LAST_PLACE_ID, id);
-        editor.apply();
-    }
-
     // Recovering last Geofence marker
     private void recoverGeofenceMarker() {
         Log.d(TAG, "recoverGeofenceMarker");
@@ -777,21 +706,6 @@ public class MainActivity extends AppCompatActivity implements
         return results;
     }
 
-
-    // Saving GeoFence marker with prefs mng
-    private void saveGeofence() {
-        Log.d(TAG, "saveGeofence()");
-//        SharedPreferences sharedPref = getPreferences(Context.MODE_PRIVATE);
-//        SharedPreferences.Editor editor = sharedPref.edit();
-
-//        editor.putLong(OLD_KEY_GEOFENCE_LAT, Double.doubleToRawLongBits(geoFenceMarker.getPosition().latitude));
-//        editor.putLong(OLD_KEY_GEOFENCE_LON, Double.doubleToRawLongBits(geoFenceMarker.getPosition().longitude));
-//        editor.apply();
-    }
-
-    public static String oldgetGeofenceLabel(Context context, String id) {
-        return getPrefs(context).getString(id, "");
-    }
 
 }
 
