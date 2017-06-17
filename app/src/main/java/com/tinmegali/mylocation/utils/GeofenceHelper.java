@@ -24,6 +24,7 @@ import com.tinmegali.mylocation.MainActivity;
 
 import org.json.JSONObject;
 
+import java.util.Locale;
 import java.util.Stack;
 
 import static android.content.ContentValues.TAG;
@@ -39,6 +40,7 @@ public class GeofenceHelper {
     private Stack<JSONObject> stack;
     private static final int GEO_DWELL_TIME_MILLIS = 5 * 60 * 1000;
     private PendingIntent geoFencePendingIntent;
+    private final static Locale locale = Locale.getDefault();
 
     public GeofenceHelper(Context context) {
         mContext = context;
@@ -100,7 +102,7 @@ public class GeofenceHelper {
     private void createAllGeofencesStoreOnDevice() {
         String key;
         JSONObject geoJsonObject;
-        JSONObject allGeofences = getSavedGeofences();
+        JSONObject allGeofences = getSavedGeofences(mContext);
         for (int i = 0; i < allGeofences.length(); i++) {
             key = allGeofences.names().optString(i);
             geoJsonObject = allGeofences.optJSONObject(key);
@@ -164,13 +166,13 @@ public class GeofenceHelper {
     }
 
     private void storeGeofenceOnDevice(JSONObject geo) {
-        JSONObject allGeofences = getSavedGeofences();
+        JSONObject allGeofences = getSavedGeofences(mContext);
         JsonHelper.setJSONValue(allGeofences, geo.optString("id"), geo);
         setSavedGeofences(allGeofences);
     }
 
-    public JSONObject getSavedGeofences() {
-        JSONObject allGeofences = JsonHelper.strToJsonObject(Store.getString(mContext, Store.SAVED_GEOFENCES));
+    public static JSONObject getSavedGeofences(Context context) {
+        JSONObject allGeofences = JsonHelper.strToJsonObject(Store.getString(context, Store.SAVED_GEOFENCES));
         return valuesStrToJsonObject(allGeofences);
     }
 
@@ -193,7 +195,7 @@ public class GeofenceHelper {
         return (ContextCompat.checkSelfPermission(mContext, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED);
     }
 
-    private JSONObject valuesStrToJsonObject(JSONObject allGeofences) {
+    private static JSONObject valuesStrToJsonObject(JSONObject allGeofences) {
         String key, value;
         JSONObject jo;
         JSONObject results = new JSONObject();
@@ -236,5 +238,13 @@ public class GeofenceHelper {
 
     private void clearAllGeofencesStoredOnDevice() {
         setSavedGeofences(new JSONObject());
+    }
+
+    public static String getGeofenceSummary(Context context, String geoId) {
+        JSONObject geo = getSavedGeofences(context).optJSONObject(geoId);
+        String label = geo.optString("label");
+        String address = geo.optString("address").substring(0, 25);
+        int radius = geo.optInt("radius");
+        return String.format(locale, "%s: %s ... (%d m)", label, address, radius);
     }
 }

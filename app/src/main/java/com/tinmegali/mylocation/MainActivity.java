@@ -1,7 +1,6 @@
 package com.tinmegali.mylocation;
 
 import android.Manifest;
-import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -60,8 +59,6 @@ import java.util.Locale;
 import static com.tinmegali.mylocation.R.id.geofence;
 
 public class MainActivity extends AppCompatActivity implements
-//        GoogleApiClient.ConnectionCallbacks,
-//        GoogleApiClient.OnConnectionFailedListener,
         LocationListener,
         OnMapReadyCallback,
         GoogleMap.OnMapClickListener,
@@ -74,26 +71,18 @@ public class MainActivity extends AppCompatActivity implements
     private static final String LAST_PLACE_ADDRESS = "geofenceLabel";
     private static final String LAST_PLACE_LAT = "geofenceLat";
     private static final String LAST_PLACE_LON = "geofenceLon";
-    private static final String GEO_PREFIX = "geo-";
 
-    private static final String KEY_GEOFENCE_RADIUS = "geofenceRadius";
-    private final static Locale locale = Locale.getDefault();
     private static final String PREF_NAME = "geoPrefs";
     public static final String REDRAW_CIRCLE_FILTER = "redrawCircleIntentFilter";
     public static final String REDRAW_TYPE_KEY = "redrawType";
     public static final String REDRAW_CONTENT_KEY = "redrawContent";
     public static final String ACTION_REDRAW_CIRCLE = "redrawCircleIntentKey";
     public static final String ACTION_REMOVE_CIRCLE = "removeDrawCircleIntentKey";
-
-    private PendingIntent geoFencePendingIntent;
-    JSONObject mGeo = new JSONObject();
-
+    private final static Locale locale = Locale.getDefault();
 
     CircleOptions mCircleOptions = new CircleOptions();
     private Circle geoFenceBorder;
     private GoogleMap map;
-    private GoogleApiClient googleApiClient;
-    private Location lastLocation;
 
     private EditText etPlaceLabel;
     private EditText etPlaceRadius;
@@ -246,25 +235,6 @@ public class MainActivity extends AppCompatActivity implements
         }
     };
 
-//    @Override
-//    public void onConnected(@Nullable Bundle bundle) {
-//        AlarmHelper.sendNotification(mContext, "onConnected follows.", 2222);
-//        Log.i(TAG, "onConnected()");
-//        getLastKnownLocation();
-//        recoverGeofenceMarker();
-//        AlarmHelper.sendNotification(mContext, "googleapi onConnected", 5459);
-//    }
-//
-//    @Override
-//    public void onConnectionSuspended(int i) {
-//        Log.w(TAG, "onConnectionSuspended()");
-//    }
-//
-//    @Override
-//    public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
-//        Log.w(TAG, "onConnectionFailed()");
-//    }
-
 
     @Override
     protected void onStart() {
@@ -301,7 +271,7 @@ public class MainActivity extends AppCompatActivity implements
 
 
     private void viewAllGeofences() {
-        JSONObject allGeofences = geofenceHelper.getSavedGeofences();
+        JSONObject allGeofences = GeofenceHelper.getSavedGeofences(mContext);
         String geofenceSummary = "";
         String key, label, address;
         int radius;
@@ -354,9 +324,10 @@ public class MainActivity extends AppCompatActivity implements
         switch (requestCode) {
             case REQ_PERMISSION: {
                 if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    Toast.makeText(mContext, "Successful! Add your new places (Home, Work...)", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(mContext, "Add your places (Home, Work...)", Toast.LENGTH_SHORT).show();
                 } else {
-                    Toast.makeText(mContext, "App will not work unless you grant location permission. Try Again", Toast.LENGTH_LONG).show();
+                    Toast.makeText(mContext, "App will not work unless you grant location permission. Try Again.", Toast.LENGTH_LONG).show();
+                    finish();
                 }
                 break;
             }
@@ -384,58 +355,11 @@ public class MainActivity extends AppCompatActivity implements
         return false;
     }
 
-//    private LocationRequest locationRequest;
-//    // Defined in mili seconds.
-//    // This number in extremely low, and should be used only for debug
-//    private final int UPDATE_INTERVAL = 15 * 60 * 1000;
-//    private final int FASTEST_INTERVAL = 15 * 60 * 900;
-
-    // Start location Updates
-//    private void startLocationUpdates() {
-//        Log.i(TAG, "startLocationUpdates()");
-//        locationRequest = LocationRequest.create()
-//                .setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY)
-//                .setInterval(UPDATE_INTERVAL)
-//                .setFastestInterval(FASTEST_INTERVAL);
-//
-//        if (checkPermission())
-//            LocationServices.FusedLocationApi.requestLocationUpdates(googleApiClient, locationRequest, this);
-//    }
-
     @Override
     public void onLocationChanged(Location location) {
         Log.d(TAG, "onLocationChanged [" + location + "]");
-        lastLocation = location;
+        Location lastLocation = location;
 //        writeActualLocation(location);
-    }
-
-    // Get last known location
-//    private void getLastKnownLocation() {
-//        Log.d(TAG, "getLastKnownLocation()");
-//        if (checkPermission()) {
-//            lastLocation = LocationServices.FusedLocationApi.getLastLocation(googleApiClient);
-//            if (lastLocation != null) {
-//                Log.i(TAG, "LasKnown location. " +
-//                        "Long: " + lastLocation.getLongitude() +
-//                        " | Lat: " + lastLocation.getLatitude());
-//                writeLastLocation();
-//                startLocationUpdates();
-//            } else {
-//                Log.w(TAG, "No location retrieved yet");
-//                startLocationUpdates();
-//            }
-//        } else askPermission();
-//    }
-
-    private void writeActualLocation(Location location) {
-//        textLat.setText("Lat: " + location.getLatitude());
-//        textLong.setText("Long: " + location.getLongitude());
-
-//        markerLocation(new LatLng(location.getLatitude(), location.getLongitude()));
-    }
-
-    private void writeLastLocation() {
-        writeActualLocation(lastLocation);
     }
 
     private Marker locationMarker;
@@ -475,151 +399,11 @@ public class MainActivity extends AppCompatActivity implements
         }
     }
 
-    // Start Geofence creation process
-//    private void startGeofence() {
-//        Log.i(TAG, "startGeofence()");
-//        if (geoFenceMarker != null) {
-//            Geofence geofence = createGeofence(geoFenceMarker.getPosition().toString().substring(0, 15), geoFenceMarker.getPosition(), GEOFENCE_RADIUS);
-//            GeofencingRequest geofenceRequest = createGeofenceRequest(geofence);
-//            addGeofence(geofenceRequest);
-//        } else {
-//            Log.e(TAG, "Geofence marker is null");
-//        }
-//    }
-
-    private static final int GEO_DWELL_TIME = 0;
     private static final float GEOFENCE_RADIUS = 200.0f; // in meters
 
-    // Create a Geofence
-    private void createGeofence(String id, String label, String address, LatLng latLng, int radius) {
-        Log.d(TAG, "createGeofence");
-        Geofence geofence = new Geofence.Builder()
-                .setRequestId(id)
-                .setCircularRegion(latLng.latitude, latLng.longitude, radius)
-                .setExpirationDuration(Geofence.NEVER_EXPIRE)
-                .setLoiteringDelay(GEO_DWELL_TIME)
-                .setTransitionTypes(Geofence.GEOFENCE_TRANSITION_ENTER | Geofence.GEOFENCE_TRANSITION_EXIT)
-                .build();
-
-        GeofencingRequest geofenceRequest = createGeofenceRequest(geofence);
-        addGeofence(geofenceRequest);
-
-        JSONObject geo = new JSONObject();
-        JsonHelper.setJSONValue(geo, "id", id);
-        JsonHelper.setJSONValue(geo, "label", label);
-        JsonHelper.setJSONValue(geo, "address", address);
-        JsonHelper.setJSONValue(geo, "lat", latLng.latitude);
-        JsonHelper.setJSONValue(geo, "lon", latLng.longitude);
-        JsonHelper.setJSONValue(geo, "radius", radius);
-        setGeofenceToSave(geo);
-    }
-
-    private void storeGeofenceOnDevice(String id, String label, String address, LatLng latLng, int radius) {
-        JSONObject newJsonGeofence = new JSONObject();
-        JsonHelper.setJSONValue(newJsonGeofence, "id", id);
-        JsonHelper.setJSONValue(newJsonGeofence, "label", label);
-        JsonHelper.setJSONValue(newJsonGeofence, "address", address);
-        JsonHelper.setJSONValue(newJsonGeofence, "lat", latLng.latitude);
-        JsonHelper.setJSONValue(newJsonGeofence, "lon", latLng.longitude);
-        JsonHelper.setJSONValue(newJsonGeofence, "radius", radius);
-        updateSavedGeofences(id, newJsonGeofence);
-    }
-
-    private void updateSavedGeofences(String id, JSONObject newJsonGeofence) {
-        JSONObject allGeofences = getSavedGeofences();
-        JsonHelper.setJSONValue(allGeofences, id, newJsonGeofence);
-        setSavedGeofences(allGeofences);
-    }
-
-    private JSONObject getSavedGeofences() {
-        JSONObject allGeofences = JsonHelper.strToJsonObject(Store.getString(mContext, Store.SAVED_GEOFENCES));
-        return valuesStrToJsonObject(allGeofences);
-    }
-
-    private void setSavedGeofences(JSONObject allGeofences) {
-        allGeofences = valuesJsonObjectToStr(allGeofences);
-        Store.setString(mContext, Store.SAVED_GEOFENCES, allGeofences.toString());
-    }
-
-    // Add the created GeofenceRequest to the device's monitoring list
-    private void addGeofence(GeofencingRequest request) {
-        Log.d(TAG, "addGeofence");
-        if (checkPermission())
-            LocationServices.GeofencingApi.addGeofences(googleApiClient, request,
-                    createGeofencePendingIntent()).setResultCallback(new ResultCallback<Status>() {
-                @Override
-                public void onResult(@NonNull Status status) {
-                }
-            });
-    }
-
-    // Create a Geofence Request
-    private GeofencingRequest createGeofenceRequest(Geofence geofence) {
-        Log.d(TAG, "createGeofenceRequest");
-        return new GeofencingRequest.Builder()
-                .setInitialTrigger(GeofencingRequest.INITIAL_TRIGGER_ENTER)
-                .addGeofence(geofence)
-                .build();
-    }
-
     @Override
-    public void onResult(@NonNull Status status) {
-    }
+    public void onResult(@NonNull Status status) { }
 
-    private void workOnCallback(Status status) {
-        Log.i(TAG, "onResult: " + status);
-        if (status.isSuccess()) {
-            Toast.makeText(mContext, "Geofence Successfully created.", Toast.LENGTH_LONG).show();
-
-            JSONObject geo = getGeofenceToSave();
-            String pID = geo.optString("id");
-            String pLabel = geo.optString("label");
-            String pAddress = geo.optString("address");
-            int pRadius = geo.optInt("radius");
-            LatLng pLatLng = new LatLng(geo.optDouble("lat"), geo.optDouble("lon"));
-
-//            addToGeofencesViewList(pID, pLabel, pAddress, pRadius);
-            storeGeofenceOnDevice(pID, pLabel, pAddress, pLatLng, pRadius);
-            redrawCircle(pLatLng.latitude, pLatLng.longitude, pRadius);
-
-        } else {
-            // inform about fail
-            Toast.makeText(MainActivity.this, "Failed to create geofence.", Toast.LENGTH_LONG).show();
-        }
-    }
-
-    void addToGeofencesViewList(String id, String placeLabel, String placeAddress, float radius) {
-        String name = String.format("%s%s", GEO_PREFIX, id);
-        String content = String.format("%s: %s (%s meters)", placeLabel, placeAddress, radius);
-        getEditor(mContext).putString(name, content).apply();
-
-        content = String.format("%s: %s... (%s m)", placeLabel, placeAddress.substring(0, 15), radius);
-        storeIdWithGeofenceDetails(id, content);
-    }
-
-    void storeIdWithGeofenceDetails(String id, String content) {
-        getEditor(mContext).putString(id, content).apply();
-    }
-
-    public String getGeofenceSummary(String geoId) {
-        JSONObject geo = getSavedGeofences().optJSONObject(geoId);
-        String label = geo.optString("label");
-        String address = geo.optString("address").substring(0, 25);
-        int radius = geo.optInt("radius");
-        return String.format(locale, "%s: %s ... (%d m)", label, address, radius);
-    }
-
-    private PendingIntent createGeofencePendingIntent() {
-        Log.d(TAG, "createGeofencePendingIntent");
-        if (geoFencePendingIntent != null)
-            return geoFencePendingIntent;
-
-        Intent intent = new Intent(mContext, GeofenceTransitionService.class);
-        int GEOFENCE_REQ_CODE = 0;
-        return PendingIntent.getService(mContext, GEOFENCE_REQ_CODE, intent, PendingIntent.FLAG_UPDATE_CURRENT);
-    }
-
-    // Draw Geofence circle on GoogleMap
 
     void drawCircle(LatLng latLng) {
         if (geoFenceBorder != null)
@@ -635,7 +419,7 @@ public class MainActivity extends AppCompatActivity implements
 
 
     void redrawCircle(double lat, double lon, int radius) {
-        if (map == null) return; // MainActivity view not active
+        if (map == null) return;
 
         if (geoFenceBorder != null)
             geoFenceBorder.remove();
@@ -649,20 +433,6 @@ public class MainActivity extends AppCompatActivity implements
         geoFenceBorder = map.addCircle(mCircleOptions);
     }
 
-    // Recovering last Geofence marker
-    private void recoverGeofenceMarker() {
-        Log.d(TAG, "recoverGeofenceMarker");
-//        SharedPreferences sharedPref = getPreferences(Context.MODE_PRIVATE);
-//        if (sharedPref.contains(OLD_KEY_GEOFENCE_LAT) && sharedPref.contains(OLD_KEY_GEOFENCE_LON)) {
-//            double lat = Double.longBitsToDouble(sharedPref.getLong(OLD_KEY_GEOFENCE_LAT, -1));
-//            double lon = Double.longBitsToDouble(sharedPref.getLong(OLD_KEY_GEOFENCE_LON, -1));
-//            LatLng latLng = new LatLng(lat, lon);
-//            markerForGeofence(latLng);
-//            drawGeofence();
-//        }
-    }
-
-
     private void removeGeofenceDraw() {
         Log.d(TAG, "removeGeofenceDraw()");
         if (geoFenceMarker != null)
@@ -671,42 +441,5 @@ public class MainActivity extends AppCompatActivity implements
             geoFenceBorder.remove();
     }
 
-    public void setGeofenceToSave(JSONObject geo) {
-        mGeo = geo;
-    }
-
-    public JSONObject getGeofenceToSave() {
-        return mGeo;
-    }
-
-    private JSONObject valuesStrToJsonObject(JSONObject allGeofences) {
-        String key, value;
-        JSONObject jo;
-        JSONObject results = new JSONObject();
-
-        for (int i = 0; i < allGeofences.length(); i++) {
-            key = allGeofences.names().optString(i);
-            value = allGeofences.optString(key);
-            jo = JsonHelper.strToJsonObject(value);
-            JsonHelper.setJSONValue(results, key, jo);
-        }
-        return results;
-    }
-
-    private JSONObject valuesJsonObjectToStr(JSONObject allGeofences) {
-        String key;
-        JSONObject joValue;
-        JSONObject results = new JSONObject();
-
-        for (int i = 0; i < allGeofences.length(); i++) {
-            key = allGeofences.names().optString(i);
-            joValue = allGeofences.optJSONObject(key);
-            JsonHelper.setJSONValue(results, key, joValue.toString());
-        }
-        return results;
-    }
-
-
 }
 
-// TODO: 5/27/17 avoid showing duplicate list of the same addresses / check if address has already been added before adding new one

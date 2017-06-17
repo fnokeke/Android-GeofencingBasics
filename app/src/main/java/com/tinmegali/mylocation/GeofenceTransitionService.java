@@ -10,6 +10,7 @@ import com.google.android.gms.location.Geofence;
 import com.google.android.gms.location.GeofenceStatusCodes;
 import com.google.android.gms.location.GeofencingEvent;
 import com.tinmegali.mylocation.utils.AlarmHelper;
+import com.tinmegali.mylocation.utils.GeofenceHelper;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -51,13 +52,10 @@ public class GeofenceTransitionService extends IntentService {
     }
 
     private String getGeoTransDetails(int geoFenceTransition, List<Geofence> triggeringGeofences) {
-        // get the ID of each geofence triggered
         ArrayList<String> triggeringGeofencesList = new ArrayList<>();
         String geofenceLabel;
         for (Geofence geofence : triggeringGeofences) {
-            MainActivity mainActivity = new MainActivity();
-            mainActivity.setContext(this);
-            geofenceLabel = mainActivity.getGeofenceSummary(geofence.getRequestId());
+            geofenceLabel = GeofenceHelper.getGeofenceSummary(this, geofence.getRequestId());
             triggeringGeofencesList.add(geofenceLabel);
         }
 
