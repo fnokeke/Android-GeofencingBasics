@@ -130,6 +130,7 @@ public class MainActivity extends AppCompatActivity implements
         initGMaps();
         initGeofence();
         initBroadcastReceiver();
+        if (!checkPermission()) askPermission();
     }
 
     private void initGMaps() {
@@ -407,7 +408,7 @@ public class MainActivity extends AppCompatActivity implements
                 if (grantResults.length > 0
                         && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                     // Permission granted
-                    getLastKnownLocation();
+//                    getLastKnownLocation();
 
                 } else {
                     // Permission denied

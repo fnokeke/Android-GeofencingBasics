@@ -106,7 +106,6 @@ public class GeofenceHelper {
             geoJsonObject = allGeofences.optJSONObject(key);
             createGeofence(geoJsonObject);
         }
-        AlarmHelper.sendNotification(mContext, "Created " + allGeofences.length() + " geofence(s).", 4545);
     }
 
     private GeofencingRequest createGeofenceRequest(Geofence geofence) {
